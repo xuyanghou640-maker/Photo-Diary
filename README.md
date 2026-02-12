@@ -50,4 +50,4 @@ This project is proprietary software. All rights reserved.
 
 ## 📞 Contact
 
-For support or inquiries, please contact: support@photodiary.com
+For support or inquiries, please [Contact Us](mailto:2311752562@qq.com).

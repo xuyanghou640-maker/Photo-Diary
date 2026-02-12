@@ -1,0 +1,340 @@
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { DiaryEntry } from './diary-entry-form';
+import L from 'leaflet';
+import { useNavigate } from 'react-router-dom';
+import { format, isSameDay, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { Filter, Search, User } from 'lucide-react';
+import { useGroup } from '../context/GroupContext';
+import { GroupManager } from './group-manager';
+import { useTranslation } from 'react-i18next';
+import { MOODS } from '../utils/mood-constants';
+import { LazyImage } from './ui/lazy-image';
+
+// Fix for default Leaflet icon not finding images
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Custom Icons for different users
+const createCustomIcon = (color: string, avatar?: string) => {
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      ">
+        ${avatar ? `<img src="${avatar}" style="width: 100%; height: 100%; object-fit: cover;" />` : ''}
+      </div>
+      <div style="
+        width: 0; 
+        height: 0; 
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid ${color};
+        margin: -2px auto 0;
+      "></div>
+    `,
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
+    popupAnchor: [0, -40]
+  });
+};
+
+interface MapViewProps {
+  entries: DiaryEntry[];
+}
+
+export function MapView({ entries }: MapViewProps) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { groups, currentGroupId, getGroupEntries } = useGroup();
+  const [selectedMood, setSelectedMood] = useState('All');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  
+  // Shared Mode State
+  const [isSharedMode, setIsSharedMode] = useState(false);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'range'>('all');
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Combine entries based on group selection
+  const allEntries = useMemo(() => {
+    // 1. If viewing a specific group, ONLY show that group's entries
+    if (currentGroupId) {
+      return getGroupEntries(currentGroupId);
+    }
+    
+    // 2. If viewing "Private Space" (currentGroupId === null)
+    // Show only personal entries (those WITHOUT a group_id or explicitly private)
+    return entries;
+  }, [entries, currentGroupId, getGroupEntries]);
+
+  // Extract all unique tags
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    allEntries.forEach(entry => {
+      entry.tags?.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags).sort();
+  }, [allEntries]);
+
+  // Filter entries
+  const filteredEntries = useMemo(() => {
+    return allEntries.filter(entry => {
+      if (!entry.location) return false;
+      
+      const matchesMood = selectedMood === 'All' || entry.mood === selectedMood;
+      
+      const matchesTag = selectedTag === '' || (entry.tags && entry.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase()));
+      
+      // Date Filtering
+      let matchesDate = true;
+      const entryDate = new Date(entry.date);
+      
+      if (dateFilter === 'today') {
+        matchesDate = isSameDay(entryDate, new Date());
+      } else if (dateFilter === 'range') {
+        matchesDate = isWithinInterval(entryDate, {
+          start: startOfDay(new Date(startDate)),
+          end: endOfDay(new Date(endDate))
+        });
+      }
+
+      return matchesMood && matchesTag && matchesDate;
+    });
+  }, [allEntries, selectedMood, selectedTag, dateFilter, startDate, endDate]);
+
+  // Default center
+  const defaultCenter: [number, number] = filteredEntries.length > 0
+    ? [filteredEntries[0].location!.lat, filteredEntries[0].location!.lng]
+    : [20, 0];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-140px)]">
+      {/* Sidebar Controls */}
+      <div className="lg:col-span-1 space-y-4 h-full overflow-y-auto pr-2">
+        <GroupManager />
+        
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm flex flex-col gap-4 border border-gray-100 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Filter className="w-4 h-4 text-blue-500" />
+            {t('filters.title')}
+          </h3>
+          
+          {/* Date Filter */}
+          <div className="space-y-2">
+            <label className="text-xs text-gray-500 font-medium">{t('filters.dateRange')}</label>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setDateFilter('all')}
+                className={`px-3 py-2 text-xs rounded-lg transition-all text-left ${
+                  dateFilter === 'all' 
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                {t('filters.allTime')}
+              </button>
+              <button
+                onClick={() => setDateFilter('today')}
+                className={`px-3 py-2 text-xs rounded-lg transition-all text-left ${
+                  dateFilter === 'today' 
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                {t('filters.today')}
+              </button>
+              <button
+                onClick={() => setDateFilter('range')}
+                className={`px-3 py-2 text-xs rounded-lg transition-all text-left ${
+                  dateFilter === 'range' 
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                {t('filters.custom')}
+              </button>
+            </div>
+
+            {dateFilter === 'range' && (
+              <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-8">From</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-8">To</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mood Filter */}
+          <div className="space-y-2">
+            <label className="text-xs text-gray-500 font-medium">{t('filters.mood')}</label>
+            <select
+              value={selectedMood}
+              onChange={(e) => setSelectedMood(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+            >
+              <option value="All">{t('timeline.all')}</option>
+              {MOODS.map(mood => (
+                <option key={mood.name} value={mood.name}>{t(`moods.${mood.name.toLowerCase()}`, mood.name)}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tag Filter */}
+          <div className="space-y-2">
+            <label className="text-xs text-gray-500 font-medium">{t('filters.tag')}</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => {
+                  setTagInput(e.target.value);
+                  setSelectedTag(e.target.value);
+                  setIsTagDropdownOpen(true);
+                }}
+                onFocus={() => setIsTagDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsTagDropdownOpen(false), 200)}
+                placeholder={t('filters.searchTags')}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+              />
+              {selectedTag && (
+                <button 
+                  onClick={() => { setSelectedTag(''); setTagInput(''); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              )}
+              {isTagDropdownOpen && allTags.length > 0 && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto z-20">
+                  {allTags.filter(tag => tag.toLowerCase().includes(tagInput.toLowerCase())).map(tag => (
+                    <div
+                      key={tag}
+                      className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => { setSelectedTag(tag); setTagInput(tag); setIsTagDropdownOpen(false); }}
+                    >
+                      #{tag}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
+            {t('filters.found', { count: filteredEntries.length })}
+          </div>
+        </div>
+      </div>
+
+      {/* Map Area */}
+      <div className="lg:col-span-3 h-full rounded-2xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 relative z-0">
+        <MapContainer 
+          key={`${defaultCenter[0]}-${defaultCenter[1]}`} 
+          center={defaultCenter} 
+          zoom={filteredEntries.length > 0 ? 5 : 2} 
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {filteredEntries.map(entry => {
+            // Determine marker color based on user
+            // Default user (me) = Blue, Partner = Pink, Others = Orange
+            let markerColor = '#3b82f6'; // blue-500
+            
+            // If viewing a group, try to use group color for members? Or user specific?
+            // Let's stick to user differentiation for now
+            if (entry.userId === 'user-2') markerColor = '#ec4899'; // pink-500
+            if (entry.userId === 'user-3') markerColor = '#f97316'; // orange-500
+            if (entry.userId === 'user-4') markerColor = '#10b981'; // green-500
+
+            return (
+              <Marker 
+                key={entry.id} 
+                position={[entry.location!.lat, entry.location!.lng]}
+                icon={createCustomIcon(markerColor, entry.userAvatar)}
+              >
+                <Popup>
+                  <div className="w-56 cursor-pointer" onClick={() => navigate(`/edit/${entry.id}`)}>
+                    {/* User Header in Popup */}
+                    {entry.userName && (
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                        {entry.userAvatar ? (
+                          <div className="w-5 h-5 rounded-full overflow-hidden">
+                             <LazyImage src={entry.userAvatar} alt={entry.userName} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <User className="w-4 h-4 text-gray-400" />
+                        )}
+                        <span className="text-xs font-bold text-gray-700">{entry.userName}</span>
+                      </div>
+                    )}
+                    
+                    <div className="w-full h-32 mb-2 rounded-lg overflow-hidden">
+                      <LazyImage 
+                        src={entry.photo} 
+                        alt={entry.caption} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p className="font-medium text-sm text-gray-900 line-clamp-2">{entry.caption}</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {entry.tags?.map(tag => (
+                        <span key={tag} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px]">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                       <span>{format(new Date(entry.date), 'MMM d, yyyy')}</span>
+                       {entry.location?.name && <span className="text-blue-600 truncate max-w-[80px]">{entry.location.name}</span>}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
+    </div>
+  );
+}

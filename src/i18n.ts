@@ -1,0 +1,1288 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+// Translation resources
+const resources = {
+  en: {
+    translation: {
+      nav: {
+        timeline: 'Timeline',
+        calendar: 'Calendar',
+        map: 'Map',
+        couple: 'Couple',
+        milestones: 'Life Milestones',
+        insights: 'Insights',
+        print: 'Print Shop',
+        logs: 'Logs',
+        add: 'New',
+        account: 'Profile'
+      },
+      milestones: {
+        title: 'Life Milestones',
+        subtitle: 'Level up your life, one memory at a time.',
+        target: 'Target',
+        current: 'Current',
+        totalCompleted: 'Total Completed',
+        photo: {
+          beginner: 'Shutterbug',
+          beginnerDesc: 'Take your first 5 photos to unlock your journey.',
+          master: 'Lens Master',
+          masterDesc: 'Capture 50 moments. You are becoming a pro!'
+        },
+        fitness: {
+          start: 'Fitness Fanatic',
+          startDesc: 'Log 10 workouts. Keep moving!'
+        },
+        reading: {
+          worm: 'Bookworm',
+          wormDesc: 'Read 12 books. Knowledge is power.'
+        },
+        viewGallery: 'View Gallery',
+        memories: 'memories',
+        noEntries: 'No memories found',
+        noEntriesDesc: 'Start adding photos with relevant tags to fill this milestone!'
+      },
+      export: {
+        button: 'Export',
+        pdf: 'Export as PDF',
+        json: 'Export as JSON',
+        exporting: 'Exporting...',
+        failed: 'Export failed. Please try again.',
+        success: 'Export successful'
+      },
+      legal: {
+        back: 'Back',
+        about: {
+          title: 'About Photo Diary',
+          intro1: 'Photo Diary was born from a simple belief: <strong>every moment matters.</strong>',
+          intro2: 'In this fast-paced world, days blend into weeks, and weeks into years. We often forget the small joys—a perfect cup of coffee, a beautiful sunset, a laugh shared with a friend. Photo Diary is designed to help you pause, capture, and cherish these fleeting moments.',
+          missionTitle: 'Our Mission',
+          missionText: 'To provide a private, beautiful, and intelligent space for you to document your life\'s journey. We believe that by reflecting on our past, we can live more fully in the present.'
+        },
+        privacy: {
+          title: 'Privacy Policy',
+          lastUpdated: 'Last updated: January 2026',
+          intro: 'At Photo Diary, we take your privacy seriously. Your memories are personal, and they should stay that way.',
+          collectionTitle: '1. Data Collection',
+          collectionText: 'We only collect the information necessary to provide our service: your photos, diary entries, and basic account information. We do not sell your personal data to third parties.',
+          aiTitle: '2. AI Features',
+          aiText: 'Our AI features (Smart Tags, Insights) process your data to provide you with better experience. For image recognition, we use local browser-based models where possible to minimize data transmission.'
+        },
+        terms: {
+          title: 'Terms of Service',
+          lastUpdated: 'Last updated: January 2026',
+          acceptanceTitle: '1. Acceptance of Terms',
+          acceptanceText: 'By accessing and using Photo Diary, you accept and agree to be bound by the terms and provision of this agreement.',
+          conductTitle: '2. User Conduct',
+          conductText: 'You agree to use the service only for lawful purposes. You are responsible for all content you post and activity that occurs under your account.'
+        }
+      },
+      welcome: {
+        title: 'Welcome to Photo Diary',
+        quote: '"Life is not measured by the number of breaths we take, but by the moments that take our breath away."',
+        subtitle: 'Record your life, cherish your memories, and love every moment.',
+        start: 'Start My Journey'
+      },
+      groups: {
+        title: 'My Groups',
+        join: 'Join Group',
+        create: 'Create New',
+        private: 'Private Space',
+        delete: 'Delete Group',
+        leave: 'Leave Group',
+        confirmDelete: 'Are you sure you want to delete this group?',
+        confirmLeave: 'Are you sure you want to leave this group?',
+        inviteCode: 'Invite Code',
+        members: 'members',
+        owner: 'Owner'
+      },
+      filters: {
+        title: 'Filters',
+        dateRange: 'Date Range',
+        allTime: 'All Time',
+        today: 'Today',
+        custom: 'Custom Range',
+        mood: 'Mood',
+        tag: 'Tag',
+        searchTags: 'Search tags...',
+        found: '{{count}} memories found',
+        noResults: 'No memories found'
+      },
+      changelog: {
+        title: 'Changelog',
+        subtitle: 'Tracking the evolution of Photo Diary',
+        share: 'Share Your Moments',
+        milestones: 'Life Milestones',
+        garden3d: 'Memory Garden 3D',
+        colordna: 'Color DNA: Nebula',
+        personalization: 'Personalization & Dark Mode',
+        ai: 'Real AI Vision Integration',
+        foundation: 'Foundation',
+        mobile: 'Mobile Experience',
+        features: {
+          milestones: 'Life Milestones: Level up your life with achievements',
+          smartGallery: 'Specialized Gallery: Auto-organized albums for each milestone',
+          smartTags: 'Smart Recognition: Intelligent tagging for fitness, reading, and photography',
+          garden3d: 'Immersive 3D Garden: Watch your memories grow in a living ecosystem',
+          weather: 'Emotional Weather System: Rain helps you grow',
+          models: 'Realistic 3D plant models with interactive details',
+          colorDna: 'New Color DNA engine with Nebula Gravity Field UI',
+          planetUI: '3D glass planets & procedural star system',
+          shareCard: 'New "Share Card" feature: Generate beautiful Polaroid-style images',
+          qr: 'Includes QR code for easy sharing to friends',
+          download: 'One-click download for Instagram/WeChat/Twitter sharing',
+          darkMode: 'Added Dark Mode support for better night-time experience',
+          theme: 'New Theme Selector with 5 accent color options',
+          ui: 'Enhanced UI components with smoother transitions',
+          readability: 'Improved text readability across all themes',
+          vision: 'Integrated Google Vision AI for auto-tagging',
+          analysis: 'Smart mood analysis based on photo content',
+          coupleSync: 'Couple Space: Real-time dual timeline synchronization',
+          coupleShare: 'Private interactions: Comments and reactions for two',
+          insightsCharts: 'Mood Heatmap: Visualize your emotional year in pixels',
+          insightsStreak: 'Data Statistics: Streaks, top moods, and more',
+          mapView: 'Footprint Map: See your journey on the world map',
+          mapInteraction: 'Location clustering and smart zooming',
+          printShop: 'Print Shop: Turn digital memories into physical books',
+          printCart: 'Shopping Cart & Order Management System',
+          init: 'The Genesis: Where it all began',
+          basic: 'Core timeline and photo upload capabilities',
+          responsive: 'Seamless mobile experience across all devices',
+          pwa: 'PWA Support: Install as a native app'
+        }
+      },
+      profile: {
+        title: 'Edit Profile',
+        changePhoto: 'Click camera icon to change photo',
+        fullName: 'Full Name',
+        username: 'Username (Unique)',
+        usernameHint: 'This will be your unique ID for adding friends.',
+        cancel: 'Cancel',
+        save: 'Save Changes',
+        success: 'Profile updated successfully!',
+        error: 'Error updating profile',
+        uploadError: 'You must select an image to upload.',
+        placeholderName: 'Your name',
+        placeholderUsername: 'username'
+      },
+      footer: {
+        about: 'About Us',
+        privacy: 'Privacy Policy',
+        terms: 'Terms of Service',
+        contact: 'Contact',
+        madeWith: 'Made with',
+        forLovers: 'for life lovers',
+        rights: 'Photo Diary',
+        pricing: 'Pricing'
+      },
+      timeline: {
+        title: 'Timeline',
+        subtitle: 'Your journey, one photo at a time.',
+        empty: 'No memories yet',
+        start: 'Start by adding your first photo!',
+        search: 'Search memories...',
+        filter: 'Filter by mood',
+        all: 'All Moods',
+        today: 'Today',
+        yesterday: 'Yesterday'
+      },
+      couple: {
+        title: 'Couple Space',
+        subtitle: 'Sync your moments. You on the left, them on the right.',
+        noGroup: 'No couple group selected. Create one and invite your partner!',
+        selectGroup: 'Select a group above to start',
+        noMemories: 'No shared memories yet.',
+        startSharing: 'Start taking photos to fill your timeline!'
+      },
+      insights: {
+        title: 'Insights',
+        subtitle: 'Discover patterns in your life.',
+        yearInPixels: 'Year in Pixels',
+        pixelDesc: 'Every pixel represents a day of your life.',
+        noData: 'No Data',
+        mood: 'Mood',
+        stats: 'Statistics',
+        totalEntries: 'Total Entries',
+        totalTags: 'Unique Tags',
+        currentStreak: 'Current Streak',
+        topMood: 'Top Mood',
+        placesVisited: 'Places Visited'
+      },
+      form: {
+        titleAdd: 'New Memory',
+        titleEdit: 'Edit Memory',
+        upload: 'Click to upload photo',
+        uploadDesc: 'Capture the moment',
+        captionPlaceholder: 'Write something about this moment...',
+        locationPlaceholder: 'Where was this taken?',
+        moodLabel: 'How are you feeling?',
+        dateLabel: 'Date',
+        shareLabel: 'Share to Group',
+        private: 'Private Diary',
+        save: 'Save Memory',
+        saving: 'Saving...',
+        delete: 'Delete Entry',
+        confirmDelete: 'Are you sure you want to delete this memory?',
+        aiTags: 'AI Tags'
+      },
+      print: {
+        title: 'Print Shop',
+        subtitle: 'Turn your digital memories into physical keepsakes.',
+        cart: 'Cart',
+        addToCart: 'Add to Cart',
+        checkout: 'Checkout',
+        polaroid: 'Polaroid Style',
+        postcard: 'Postcard',
+        photobook: 'Photo Book',
+        price: '${{price}}',
+        theYearOf: 'The Year Of',
+        introduction: 'Introduction',
+        mood: 'Mood',
+        theEnd: 'The End',
+        flipInstruction: 'Use Arrow Keys or Click Corners to Flip'
+      },
+      account: {
+        title: 'Account & Friends',
+        myProfile: 'My Profile',
+        achievements: 'Achievements',
+        friends: 'Friends',
+        signOut: 'Sign Out',
+        editProfile: 'Edit Profile',
+        friendId: 'Friend ID',
+        email: 'Email',
+        anonymous: 'Anonymous User',
+        noUsername: 'no_username',
+        generating: 'Generating...',
+        addFriend: 'Add New Friend',
+        enterEmail: "Enter friend's email address",
+        sendRequest: 'Send Request',
+        friendRequests: 'Friend Requests',
+        yourFriends: 'Your Friends',
+        noFriends: 'No friends yet. Invite someone above!',
+        removeFriend: 'Remove Friend',
+        confirmRemove: 'Remove {{name}} from friends?',
+        language: 'Language',
+        theme: 'Theme'
+      },
+      subscription: {
+        title: 'Upgrade your Memories',
+        subtitle: 'Choose the plan that fits your storytelling journey. Cancel anytime.',
+        monthly: 'Monthly',
+        yearly: 'Yearly',
+        save: 'Save 20%',
+        mostPopular: 'Most Popular',
+        currentPlan: 'Current Plan',
+        getStarted: 'Get Started',
+        features: {
+          photos: 'photos per month',
+          filters: 'Basic filters & editing',
+          export: 'Standard quality export',
+          ads: 'Ad-supported experience',
+          unlimited: 'Unlimited photo storage',
+          ai: 'Advanced AI analysis & tags',
+          quality: '4K quality export',
+          support: 'Priority support',
+          noAds: 'No ads',
+          lifetime: 'Lifetime updates included',
+          badge: 'Exclusive "Founder" badge',
+          beta: 'Early access to beta features',
+          vip: 'VIP Print Shop discounts'
+        },
+        payment: {
+          title: 'Checkout',
+          total: 'Total Amount',
+          method: 'Select Payment Method',
+          card: 'Credit Card',
+          wechat: 'WeChat Pay',
+          alipay: 'Alipay',
+          scan: 'Scan QR Code to pay',
+          instant: 'Instant payment',
+          cardNumber: 'Card Number',
+          expiry: 'Expiry',
+          cvc: 'CVC',
+          pay: 'Pay {{amount}} Securely',
+          processing: 'Processing payment...',
+          success: 'Payment Successful!',
+          confirmed: 'Your order has been confirmed.',
+          secure: '256-bit SSL Encrypted Payment',
+          scanTip: 'Scan with App',
+          uploadTip: 'Tip: Use a creator platform (e.g., Buy Me a Coffee, Mianbao) to protect privacy.',
+          openLink: 'Or Open Payment Link'
+        }
+      },
+      common: {
+        loading: 'Loading...',
+        saving: 'Saving...',
+        success: 'Success',
+        error: 'Error',
+        cancel: 'Cancel',
+        save: 'Save Changes',
+        delete: 'Delete',
+        edit: 'Edit',
+        back: 'Back'
+      },
+      auth: {
+        required: 'Please sign in to continue'
+      },
+      moods: {
+        happy: 'Happy',
+        sad: 'Sad',
+        excited: 'Excited',
+        tired: 'Tired',
+        neutral: 'Neutral',
+        angry: 'Angry',
+        grateful: 'Grateful',
+        anxious: 'Anxious',
+        calm: 'Calm',
+        inspired: 'Inspired',
+        stressed: 'Stressed',
+        energetic: 'Energetic'
+      }
+    }
+  },
+  zh: {
+    translation: {
+      nav: {
+        timeline: '时光轴',
+        calendar: '日历',
+        map: '足迹',
+        couple: '甜蜜空间',
+        milestones: '人生清单',
+        insights: '回忆盘点',
+        print: '冲印店',
+        logs: '更新日志',
+        add: '记一笔',
+        account: '我的'
+      },
+      milestones: {
+        title: '人生清单',
+        subtitle: '点亮成就，见证你的每一次成长。',
+        target: '目标',
+        current: '当前',
+        totalCompleted: '已达成',
+        photo: {
+          beginner: '摄影小白',
+          beginnerDesc: '拍摄你的前5张照片，开启记录之旅。',
+          master: '镜头大师',
+          masterDesc: '记录50个瞬间。你已经是个成熟的摄影师了！'
+        },
+        fitness: {
+          start: '健身达人',
+          startDesc: '打卡10次运动。坚持就是胜利！'
+        },
+        reading: {
+          worm: '书虫',
+          wormDesc: '读完12本书。书中自有黄金屋。'
+        },
+        viewGallery: '查看专项图库',
+        memories: '条回忆',
+        noEntries: '暂无相关回忆',
+        noEntriesDesc: '快去添加带有相关标签的照片，点亮这个成就吧！'
+      },
+      export: {
+        button: '导出数据',
+        pdf: '导出为 PDF (打印版)',
+        json: '导出为 JSON (备份)',
+        exporting: '正在导出...',
+        failed: '导出失败，请重试',
+        success: '导出成功'
+      },
+      legal: {
+        back: '返回',
+        about: {
+          title: '关于 Photo Diary',
+          intro1: 'Photo Diary 诞生于一个简单的信念：<strong>每一个瞬间都值得铭记。</strong>',
+          intro2: '在这个快节奏的世界里，日子一天天过去，我们也常常忘记那些微小的确幸——一杯完美的咖啡、一场壮丽的日落、与好友的一次开怀大笑。Photo Diary 旨在帮助你停下脚步，定格并珍藏这些稍纵即逝的美好。',
+          missionTitle: '我们的使命',
+          missionText: '为你提供一个私密、精美且智能的空间，记录你的人生旅程。我们相信，通过回望过去，我们可以更充实地活在当下。'
+        },
+        privacy: {
+          title: '隐私政策',
+          lastUpdated: '最后更新：2026年1月',
+          intro: '在 Photo Diary，我们非常重视您的隐私。您的回忆是私密的，理应如此。',
+          collectionTitle: '1. 数据收集',
+          collectionText: '我们只收集提供服务所必需的信息：您的照片、日记内容和基本账户信息。我们绝不会将您的个人数据出售给第三方。',
+          aiTitle: '2. AI 功能',
+          aiText: '我们的 AI 功能（智能标签、回忆盘点）会处理您的数据以提供更好的体验。对于图像识别，我们会尽可能使用本地浏览器模型，以最大限度地减少数据传输。'
+        },
+        terms: {
+          title: '服务条款',
+          lastUpdated: '最后更新：2026年1月',
+          acceptanceTitle: '1. 条款接受',
+          acceptanceText: '访问并使用 Photo Diary，即表示您接受并同意遵守本协议的条款和规定。',
+          conductTitle: '2. 用户行为',
+          conductText: '您同意仅将本服务用于合法目的。您对在您的账户下发布的所有内容和发生的活动负责。'
+        }
+      },
+      welcome: {
+        title: '欢迎来到 Photo Diary',
+        quote: '“生命的广度不在于我们呼吸了多少次，而在于那些令我们屏息的瞬间。”',
+        subtitle: '记录生活，珍藏回忆，热爱每一个当下。',
+        start: '开启我的旅程'
+      },
+      groups: {
+        title: '我的圈子',
+        join: '加入圈子',
+        create: '新建圈子',
+        private: '私密空间',
+        delete: '解散圈子',
+        leave: '退出圈子',
+        confirmDelete: '确定要解散这个圈子吗？',
+        confirmLeave: '确定要退出这个圈子吗？',
+        inviteCode: '邀请码',
+        members: '成员',
+        owner: '圈主'
+      },
+      filters: {
+        title: '筛选',
+        dateRange: '日期范围',
+        allTime: '所有时间',
+        today: '今天',
+        custom: '自定义范围',
+        mood: '心情',
+        tag: '标签',
+        searchTags: '搜索标签...',
+        found: '找到 {{count}} 条回忆',
+        noResults: '没有找到相关回忆'
+      },
+      changelog: {
+        title: '更新日志',
+        subtitle: '见证 Photo Diary 的每一次进步',
+        share: '分享你的美好',
+        milestones: '人生清单',
+        garden3d: '心灵花园 3D',
+        colordna: '色彩 DNA：星云引力场',
+        personalization: '个性化与深色模式',
+        ai: 'AI 视觉集成',
+        couple: '甜蜜空间',
+        insights: '回忆盘点',
+        map: '足迹地图',
+        print: '冲印店',
+        core: '核心架构',
+        features: {
+          milestones: '人生清单：成就系统上线，记录你的每一次成长',
+          smartGallery: '专项图库：点击成就卡片，回顾专属的高光时刻',
+          smartTags: '智能识别算法：自动归类健身、阅读、摄影等主题日记',
+          garden3d: '沉浸式 3D 花园：看着你的回忆在生态系统中生长',
+          weather: '情绪天气系统：雨天也是成长的养分',
+          models: '写实级 3D 植物模型与细腻的交互细节',
+          colorDna: '全新色彩 DNA 引擎：沉浸式星云引力场交互',
+          planetUI: '3D 玻璃质感行星与程序化动态星空',
+          shareCard: '新增“分享卡片”功能：生成精美的拍立得风格图片',
+          qr: '包含二维码，方便好友扫码查看',
+          download: '一键下载，轻松分享到微信/朋友圈/Instagram',
+          darkMode: '新增深色模式支持，夜间使用更舒适',
+          theme: '全新主题选择器，提供5种配色方案',
+          ui: '优化 UI 组件，过渡动画更流畅',
+          readability: '提升了所有主题下的文字可读性',
+          vision: '集成 Google Vision AI 自动标注',
+          analysis: '基于照片内容的智能心情分析',
+          coupleSync: '双人时光轴同步：左边是你，右边是Ta',
+          coupleShare: '私密互动：专属二人的点赞与留言',
+          insightsCharts: '年度心情像素格：用色彩可视化你的情绪起伏',
+          insightsStreak: '深度数据统计：打卡连胜、高频心情分布',
+          mapView: '地图模式：点亮你的世界足迹',
+          mapInteraction: '智能聚合：自动按城市/国家归类照片',
+          printShop: '冲印店上线：将回忆制作成实体相册',
+          printCart: '购物车与订单系统：一键下单，送货到家',
+          init: '创世纪：一切的开始',
+          basic: '核心时光轴与照片上传功能',
+          responsive: '全端适配：移动端无缝体验',
+          pwa: 'PWA 支持：像原生应用一样安装'
+        }
+      },
+      profile: {
+        title: '编辑资料',
+        changePhoto: '点击相机图标更换头像',
+        fullName: '昵称',
+        username: '用户名 (唯一)',
+        usernameHint: '这将是好友添加你的唯一凭证。',
+        cancel: '取消',
+        save: '保存更改',
+        success: '资料更新成功！',
+        error: '更新失败',
+        uploadError: '请选择一张图片上传。',
+        placeholderName: '你的昵称',
+        placeholderUsername: '用户名'
+      },
+      footer: {
+        about: '关于我们',
+        privacy: '隐私政策',
+        terms: '服务条款',
+        contact: '联系我们',
+        madeWith: 'Made with',
+        forLovers: 'for life lovers',
+        rights: 'Photo Diary',
+        pricing: '订阅方案'
+      },
+      timeline: {
+        title: '时光轴',
+        subtitle: '用照片串起生活的点滴。',
+        empty: '这里还空空如也',
+        start: '快去记录你的第一张照片吧！',
+        search: '搜索回忆...',
+        filter: '按心情筛选',
+        all: '全部心情',
+        today: '今天',
+        yesterday: '昨天'
+      },
+      couple: {
+        title: '甜蜜空间',
+        subtitle: '同屏互动。左边是你，右边是Ta。',
+        noGroup: '还没有选择情侣空间。快去创建一个并邀请另一半吧！',
+        selectGroup: '请在上方选择一个群组',
+        noMemories: '还没有共同回忆哦。',
+        startSharing: '多拍点照片，填满你们的时光轴！'
+      },
+      insights: {
+        title: '回忆盘点',
+        subtitle: '探索你生活的轨迹与规律。',
+        yearInPixels: '心情格子',
+        pixelDesc: '每一个像素点，都是你生命中的一天。',
+        noData: '无数据',
+        mood: '心情',
+        stats: '数据统计',
+        totalEntries: '累计记录',
+        totalTags: '标签总数',
+        currentStreak: '连续打卡',
+        topMood: '年度心情',
+        placesVisited: '打卡地点'
+      },
+      form: {
+        titleAdd: '记录美好',
+        titleEdit: '编辑回忆',
+        upload: '点击上传照片',
+        uploadDesc: '定格这一刻',
+        captionPlaceholder: '此刻你在想什么...',
+        locationPlaceholder: '这是在哪里？',
+        moodLabel: '今天心情怎么样？',
+        dateLabel: '日期',
+        shareLabel: '分享到圈子',
+        private: '私密日记',
+        save: '保存回忆',
+        saving: '正在保存...',
+        delete: '删除这条回忆',
+        confirmDelete: '确定要删除这条美好的回忆吗？',
+        aiTags: 'AI 智能标签'
+      },
+      print: {
+        title: '照片冲印',
+        subtitle: '将数字回忆变成实物珍藏。',
+        cart: '购物车',
+        addToCart: '加入购物车',
+        checkout: '去结算',
+        polaroid: '拍立得风格',
+        postcard: '明信片',
+        photobook: '纪念相册',
+        price: '¥{{price}}',
+        theYearOf: '年度',
+        introduction: '序言',
+        mood: '心情',
+        theEnd: '完',
+        flipInstruction: '使用方向键或点击角落翻页'
+      },
+      account: {
+        title: '账户与好友',
+        myProfile: '个人资料',
+        achievements: '成就徽章',
+        friends: '好友列表',
+        signOut: '退出登录',
+        editProfile: '编辑资料',
+        friendId: '交友 ID',
+        email: '邮箱',
+        anonymous: '匿名用户',
+        noUsername: '暂无用户名',
+        generating: '生成中...',
+        addFriend: '添加好友',
+        enterEmail: '输入好友邮箱',
+        sendRequest: '发送请求',
+        friendRequests: '新的朋友',
+        yourFriends: '我的好友',
+        noFriends: '暂无好友，快去邀请吧！',
+        removeFriend: '删除好友',
+        confirmRemove: '确定要删除好友 {{name}} 吗？',
+        language: '语言设置',
+        theme: '主题风格'
+      },
+      subscription: {
+        title: '升级你的回忆',
+        subtitle: '选择适合你的记录方案。随时取消。',
+        monthly: '月付',
+        yearly: '年付',
+        save: '省 20%',
+        mostPopular: '最受欢迎',
+        currentPlan: '当前方案',
+        getStarted: '立即开始',
+        features: {
+          photos: '每月照片限额',
+          filters: '基础滤镜与编辑',
+          export: '标准画质导出',
+          ads: '含广告',
+          unlimited: '无限照片存储',
+          ai: '高级 AI 分析与标签',
+          quality: '4K 无损导出',
+          support: '优先客服支持',
+          noAds: '无广告体验',
+          lifetime: '终身免费更新',
+          badge: '专属“创始人”徽章',
+          beta: '新功能抢先体验',
+          vip: '冲印店 VIP 折扣'
+        },
+        payment: {
+          title: '收银台',
+          total: '支付总额',
+          method: '选择支付方式',
+          card: '信用卡',
+          wechat: '微信支付',
+          alipay: '支付宝',
+          scan: '扫码支付',
+          instant: '即时到账',
+          cardNumber: '卡号',
+          expiry: '有效期',
+          cvc: '安全码',
+          pay: '安全支付 {{amount}}',
+          processing: '正在处理...',
+          success: '订单已提交',
+          confirmed: '我们将核实您的支付并在后台处理订单。',
+          secure: '256位 SSL 加密支付',
+          scanTip: '请使用微信/支付宝扫码',
+          uploadTip: '注：个人收款码无法自动回调，请务必支付准确金额，我们会尽快人工核实。',
+          openLink: ''
+        }
+      },
+      common: {
+        loading: '加载中...',
+        saving: '保存中...',
+        success: '操作成功',
+        error: '出错了',
+        cancel: '取消',
+        save: '保存更改',
+        delete: '删除',
+        edit: '编辑',
+        back: '返回'
+      },
+      auth: {
+        required: '请先登录'
+      },
+      moods: {
+        happy: '开心',
+        sad: '难过',
+        excited: '兴奋',
+        tired: '疲惫',
+        neutral: '平静',
+        angry: '生气',
+        grateful: '感激',
+        anxious: '焦虑',
+        calm: '平静',
+        inspired: '灵感',
+        stressed: '压力',
+        energetic: '活力'
+      }
+    }
+  },
+  ja: {
+    translation: {
+      nav: {
+        timeline: 'タイムライン',
+        calendar: 'カレンダー',
+        map: '足跡',
+        couple: 'カップル',
+        milestones: '人生の節目',
+        insights: '思い出',
+        print: 'プリント',
+        logs: '更新履歴',
+        add: '記録',
+        account: 'マイページ'
+      },
+      milestones: {
+        title: '人生の節目',
+        subtitle: '思い出とともに、人生をレベルアップ。',
+        target: '目標',
+        current: '現在',
+        totalCompleted: '達成済み',
+        photo: {
+          beginner: 'カメラ初心者',
+          beginnerDesc: '最初の5枚を撮影して、旅を始めましょう。',
+          master: 'レンズマスター',
+          masterDesc: '50の瞬間を捉える。もうプロの領域です！'
+        },
+        fitness: {
+          start: 'フィットネスマニア',
+          startDesc: '10回のワークアウトを記録。動き続けよう！'
+        },
+        reading: {
+          worm: '本の虫',
+          wormDesc: '12冊の本を完読。知識は力なり。'
+        },
+        viewGallery: 'ギャラリーを見る',
+        memories: '件の思い出',
+        noEntries: '思い出が見つかりません',
+        noEntriesDesc: '関連するタグを付けた写真を追加して、このマイルストーンを達成しましょう！'
+      },
+      export: {
+        button: 'エクスポート',
+        pdf: 'PDFとして保存 (印刷用)',
+        json: 'JSONとして保存 (バックアップ)',
+        exporting: 'エクスポート中...',
+        failed: '失敗しました。再試行してください',
+        success: '完了しました'
+      },
+      legal: {
+        back: '戻る',
+        about: {
+          title: 'Photo Diaryについて',
+          intro1: 'Photo Diaryはシンプルな信念から生まれました：<strong>すべての瞬間に意味がある。</strong>',
+          intro2: '忙しい日々の中で、私たちは小さな喜びを忘れがちです。完璧なコーヒー、美しい夕日、友達との笑い声。Photo Diaryは、そんな儚い瞬間を一時停止し、捉え、大切にするためのお手伝いをします。',
+          missionTitle: '私たちのミッション',
+          missionText: 'あなたの人生の旅を記録するための、プライベートで美しく、インテリジェントな空間を提供すること。過去を振り返ることで、現在をより豊かに生きることができると信じています。'
+        },
+        privacy: {
+          title: 'プライバシーポリシー',
+          lastUpdated: '最終更新：2026年1月',
+          intro: 'Photo Diaryでは、お客様のプライバシーを真剣に受け止めています。あなたの思い出は個人的なものであり、そうあるべきです。',
+          collectionTitle: '1. データ収集',
+          collectionText: 'サービスの提供に必要な情報（写真、日記、基本的なアカウント情報）のみを収集します。個人データを第三者に販売することはありません。',
+          aiTitle: '2. AI機能',
+          aiText: 'AI機能（スマートタグ、インサイト）は、より良い体験を提供するためにデータを処理します。画像認識には、データ転送を最小限に抑えるため、可能な限りローカルブラウザベースのモデルを使用します。'
+        },
+        terms: {
+          title: '利用規約',
+          lastUpdated: '最終更新：2026年1月',
+          acceptanceTitle: '1. 規約への同意',
+          acceptanceText: 'Photo Diaryにアクセスして使用することにより、本契約の条件に拘束されることに同意したものとみなされます。',
+          conductTitle: '2. ユーザーの行動',
+          conductText: '合法的な目的でのみサービスを使用することに同意します。あなたのアカウントで投稿されたすべてのコンテンツと発生した活動について、あなたが責任を負います。'
+        }
+      },
+      welcome: {
+        title: 'Photo Diaryへようこそ',
+        quote: '「人生の長さは呼吸の数ではなく、息をのむような瞬間の数で測られる。」',
+        subtitle: '人生を記録し、思い出を大切にし、すべての瞬間を愛そう。',
+        start: '旅を始める'
+      },
+      groups: {
+        title: 'グループ',
+        join: '参加',
+        create: '作成',
+        private: 'プライベート',
+        delete: '削除',
+        leave: '退会',
+        confirmDelete: '本当に削除しますか？',
+        confirmLeave: '本当に退会しますか？',
+        inviteCode: '招待コード',
+        members: 'メンバー',
+        owner: '管理者'
+      },
+      filters: {
+        title: 'フィルター',
+        dateRange: '期間',
+        allTime: '全期間',
+        today: '今日',
+        custom: 'カスタム',
+        mood: '気分',
+        tag: 'タグ',
+        searchTags: 'タグ検索...',
+        found: '{{count}} 件見つかりました',
+        noResults: '見つかりませんでした'
+      },
+      changelog: {
+        title: '更新履歴',
+        subtitle: 'Photo Diaryの進化の記録',
+        share: '思い出を共有',
+        milestones: '人生の節目',
+        garden3d: '心の庭 3D',
+        colordna: 'Color DNA: 星雲',
+        personalization: 'パーソナライズ & ダークモード',
+        ai: 'AIビジョン統合',
+        foundation: '基盤',
+        mobile: 'モバイル体験',
+        features: {
+          milestones: '人生の節目：実績システムで人生をレベルアップ',
+          smartGallery: '専門ギャラリー：実績カードをクリックして専用アルバムを表示',
+          smartTags: 'スマート認識：フィットネス、読書、写真などのテーマを自動分類',
+          garden3d: '没入型3Dガーデン：思い出がエコシステムの中で成長する様子を見守ろう',
+          weather: '感情天気システム：雨も成長の糧になる',
+          models: 'リアルな3D植物モデルと繊細なインタラクション',
+          colorDna: '新しいColor DNAエンジン：星雲重力場UI',
+          planetUI: '3Dガラス惑星とプロシージャルな星空',
+          shareCard: '「シェアカード」機能：ポラロイド風の画像を生成',
+          qr: 'QRコード付きで友達に簡単シェア',
+          download: 'ワンクリックでInstagram/Twitterにシェア',
+          darkMode: 'ダークモード対応',
+          theme: '5色のテーマカラー',
+          ui: 'UIアニメーションの改善',
+          readability: '文字の読みやすさを向上',
+          vision: 'Google Vision AIによる自動タグ付け',
+          analysis: '写真内容に基づくスマートな気分分析',
+          coupleSync: 'カップルスペース：リアルタイムのデュアルタイムライン同期',
+          coupleShare: 'プライベートな交流：二人のためのコメントとリアクション',
+          insightsCharts: 'ムードヒートマップ：感情の年間ピクセル可視化',
+          insightsStreak: 'データ統計：ストリーク、トップムードなど',
+          mapView: '足跡マップ：世界地図で旅の軌跡を確認',
+          mapInteraction: 'ロケーションクラスタリングとスマートズーム',
+          printShop: 'プリントショップ：デジタルの思い出を物理的な本に',
+          printCart: 'ショッピングカート＆注文管理システム',
+          init: '創世記：すべての始まり',
+          basic: 'コアタイムラインと写真アップロード機能',
+          responsive: 'シームレスなモバイル体験',
+          pwa: 'PWAサポート：ネイティブアプリのようにインストール'
+        }
+      },
+      profile: {
+        title: 'プロフィール編集',
+        changePhoto: 'カメラアイコンをタップして変更',
+        fullName: '表示名',
+        username: 'ユーザー名 (一意)',
+        usernameHint: '友達追加のためのIDになります。',
+        cancel: 'キャンセル',
+        save: '保存',
+        success: 'プロフィールを更新しました！',
+        error: '更新に失敗しました',
+        uploadError: '画像を選択してください。',
+        placeholderName: '名前',
+        placeholderUsername: 'ユーザー名'
+      },
+      footer: {
+        about: '私たちについて',
+        privacy: 'プライバシーポリシー',
+        terms: '利用規約',
+        contact: 'お問い合わせ',
+        madeWith: 'Made with',
+        forLovers: 'for life lovers',
+        rights: 'Photo Diary',
+        pricing: '요금제'
+      },
+      timeline: {
+        title: 'タイムライン',
+        subtitle: '写真で綴る、あなたの物語。',
+        empty: 'まだ記録がありません',
+        start: '最初の1枚を投稿してみましょう！',
+        search: '思い出を検索...',
+        filter: '気分でフィルター',
+        all: 'すべての気分',
+        today: '今日',
+        yesterday: '昨日'
+      },
+      couple: {
+        title: 'カップルスペース',
+        subtitle: '二人の時間を同期しよう。左があなた、右がパートナー。',
+        noGroup: 'カップルグループが選択されていません。作成して招待しましょう！',
+        selectGroup: '上のグループを選択して開始',
+        noMemories: 'まだ共有された思い出がありません。',
+        startSharing: '写真を撮って、タイムラインを埋め尽くそう！'
+      },
+      insights: {
+        title: '思い出分析',
+        subtitle: '生活のパターンを発見しよう。',
+        yearInPixels: 'ムードピクセル',
+        pixelDesc: '1つのピクセルが、あなたの人生の1日を表します。',
+        noData: 'データなし',
+        mood: '気分',
+        stats: '統計',
+        totalEntries: '総投稿数',
+        totalTags: 'タグ数',
+        currentStreak: '連続投稿',
+        topMood: '最多ムード',
+        placesVisited: '訪れた場所'
+      },
+      form: {
+        titleAdd: '思い出を記録',
+        titleEdit: '思い出を編集',
+        upload: '写真をアップロード',
+        uploadDesc: 'この瞬間を切り取る',
+        captionPlaceholder: '今の気持ちを書いてみよう...',
+        locationPlaceholder: '場所はどこ？',
+        moodLabel: '今の気分は？',
+        dateLabel: '日付',
+        shareLabel: 'グループに共有',
+        private: 'プライベート日記',
+        save: '保存する',
+        saving: '保存中...',
+        delete: '削除する',
+        confirmDelete: '本当にこの思い出を削除しますか？',
+        aiTags: 'AIタグ'
+      },
+      print: {
+        title: 'プリントショップ',
+        subtitle: 'デジタルの思い出を、カタチに残そう。',
+        cart: 'カート',
+        addToCart: 'カートに入れる',
+        checkout: '購入手続き',
+        polaroid: 'ポラロイド風',
+        postcard: 'ポストカード',
+        photobook: 'フォトブック',
+        price: '¥{{price}}',
+        theYearOf: '今年の',
+        introduction: 'はじめに',
+        mood: '気分',
+        theEnd: 'おわり',
+        flipInstruction: '矢印キーまたは角をクリックしてページをめくる'
+      },
+      account: {
+        title: 'アカウントと友達',
+        myProfile: 'プロフィール',
+        achievements: '実績バッジ',
+        friends: '友達リスト',
+        signOut: 'ログアウト',
+        editProfile: 'プロフィール編集',
+        friendId: '友達ID',
+        email: 'メールアドレス',
+        anonymous: '匿名ユーザー',
+        noUsername: 'ユーザー名未設定',
+        generating: '生成中...',
+        addFriend: '友達追加',
+        enterEmail: '友達のメールアドレスを入力',
+        sendRequest: '送信',
+        friendRequests: '友達リクエスト',
+        yourFriends: 'あなたの友達',
+        noFriends: '友達がいません。招待しましょう！',
+        removeFriend: '友達削除',
+        confirmRemove: '本当に {{name}} を削除しますか？',
+        language: '言語設定',
+        theme: 'テーマ'
+      },
+      subscription: {
+        payment: {
+          secure: '256ビット SSL 暗号化支払い',
+          scanTip: 'アプリでスキャン',
+          uploadTip: '支払い確認までしばらくお待ちください。',
+          openLink: ''
+        }
+      },
+      common: {
+        loading: '読み込み中...',
+        saving: '保存中...',
+        success: '成功しました',
+        error: 'エラーが発生しました',
+        cancel: 'キャンセル',
+        save: '変更を保存',
+        delete: '削除',
+        edit: '編集',
+        back: '戻る'
+      },
+      moods: {
+        happy: 'ハッピー',
+        sad: '悲しい',
+        excited: 'ワクワク',
+        tired: '疲れた',
+        neutral: '普通',
+        angry: '怒り',
+        grateful: '感謝',
+        anxious: '不安',
+        calm: '穏やか',
+        inspired: '感動',
+        stressed: 'ストレス',
+        energetic: '元気'
+      }
+    }
+  },
+  ko: {
+    translation: {
+      nav: {
+        timeline: '타임라인',
+        calendar: '캘린더',
+        map: '발자국',
+        couple: '커플 공간',
+        milestones: '인생 마일스톤',
+        insights: '추억 통계',
+        print: '인화소',
+        logs: '업데이트',
+        add: '기록하기',
+        account: '내 정보'
+      },
+      milestones: {
+        title: '인생 마일스톤',
+        subtitle: '추억 하나하나로 인생의 레벨을 올려보세요.',
+        target: '목표',
+        current: '현재',
+        totalCompleted: '완료됨',
+        photo: {
+          beginner: '사진 초보',
+          beginnerDesc: '첫 5장의 사진을 찍어 여정을 시작하세요.',
+          master: '렌즈 마스터',
+          masterDesc: '50개의 순간을 포착하세요. 당신은 이제 프로입니다!',
+        },
+        fitness: {
+          start: '피트니스 매니아',
+          startDesc: '운동 10회 기록. 계속 움직이세요!'
+        },
+        reading: {
+          worm: '책벌레',
+          wormDesc: '책 12권 읽기. 아는 것이 힘입니다.'
+        },
+        viewGallery: '갤러리 보기',
+        memories: '개의 추억',
+        noEntries: '추억이 없습니다',
+        noEntriesDesc: '관련 태그가 있는 사진을 추가하여 이 마일스톤을 채워보세요!'
+      },
+      export: {
+        button: '내보내기',
+        pdf: 'PDF로 저장 (인쇄용)',
+        json: 'JSON으로 저장 (백업용)',
+        exporting: '내보내는 중...',
+        failed: '실패했습니다. 다시 시도해주세요.',
+        success: '성공'
+      },
+      legal: {
+        back: '뒤로',
+        about: {
+          title: 'Photo Diary 소개',
+          intro1: 'Photo Diary는 단순한 믿음에서 시작되었습니다: <strong>모든 순간은 소중합니다.</strong>',
+          intro2: '빠르게 흘러가는 세상 속에서 하루는 일주일이 되고, 일주일은 일 년이 됩니다. 우리는 종종 완벽한 커피 한 잔, 아름다운 노을, 친구와의 웃음 같은 작은 기쁨들을 잊고 삽니다. Photo Diary는 당신이 잠시 멈춰 서서 이 찰나의 순간들을 기록하고 간직할 수 있도록 돕습니다.',
+          missionTitle: '우리의 미션',
+          missionText: '당신의 인생 여정을 기록할 수 있는 사적이고 아름답고 지능적인 공간을 제공하는 것입니다. 우리는 과거를 되돌아봄으로써 현재를 더 충실하게 살 수 있다고 믿습니다.'
+        },
+        privacy: {
+          title: '개인정보처리방침',
+          lastUpdated: '최종 업데이트: 2026년 1월',
+          intro: 'Photo Diary는 당신의 개인정보를 매우 중요하게 생각합니다. 당신의 추억은 지극히 개인적인 것이며, 그렇게 유지되어야 합니다.',
+          collectionTitle: '1. 데이터 수집',
+          collectionText: '우리는 서비스 제공에 필요한 최소한의 정보(사진, 일기 내용, 기본 계정 정보)만을 수집합니다. 당신의 개인 데이터를 제3자에게 판매하지 않습니다.',
+          aiTitle: '2. AI 기능',
+          aiText: '우리의 AI 기능(스마트 태그, 인사이트)은 더 나은 경험을 제공하기 위해 당신의 데이터를 처리합니다. 이미지 인식의 경우, 데이터 전송을 최소화하기 위해 가능한 한 로컬 브라우저 기반 모델을 사용합니다.'
+        },
+        terms: {
+          title: '이용약관',
+          lastUpdated: '최종 업데이트: 2026년 1월',
+          acceptanceTitle: '1. 약관 동의',
+          acceptanceText: 'Photo Diary를 이용함으로써 당신은 본 계약의 약관 및 규정을 준수하는 데 동의하게 됩니다.',
+          conductTitle: '2. 사용자 행동',
+          conductText: '당신은 합법적인 목적으로만 서비스를 이용하는 데 동의합니다. 당신의 계정에서 게시된 모든 콘텐츠와 발생한 활동에 대한 책임은 당신에게 있습니다.'
+        }
+      },
+      welcome: {
+        title: 'Photo Diary에 오신 것을 환영합니다',
+        quote: '"인생은 우리가 쉰 숨의 횟수가 아니라, 숨 막힐 듯 아름다웠던 순간들로 측정된다."',
+        subtitle: '당신의 삶을 기록하고, 추억을 소중히 여기며, 모든 순간을 사랑하세요.',
+        start: '여정 시작하기'
+      },
+      groups: {
+        title: '내 그룹',
+        join: '그룹 가입',
+        create: '그룹 생성',
+        private: '비공개 공간',
+        delete: '그룹 삭제',
+        leave: '그룹 나가기',
+        confirmDelete: '정말 삭제하시겠습니까?',
+        confirmLeave: '정말 나가시겠습니까?',
+        inviteCode: '초대 코드',
+        members: '멤버',
+        owner: '방장'
+      },
+      filters: {
+        title: '필터',
+        dateRange: '날짜 범위',
+        allTime: '전체 기간',
+        today: '오늘',
+        custom: '직접 설정',
+        mood: '기분',
+        tag: '태그',
+        searchTags: '태그 검색...',
+        found: '{{count}}개의 추억',
+        noResults: '검색 결과 없음'
+      },
+      changelog: {
+        title: '업데이트 내역',
+        subtitle: 'Photo Diary의 성장 기록',
+        share: '추억 공유하기',
+        milestones: '인생 마일스톤',
+        garden3d: '마음의 정원 3D',
+        colordna: 'Color DNA: 성운',
+        personalization: '테마 & 다크 모드',
+        ai: 'AI 비전 통합',
+        foundation: '기반',
+        mobile: '모바일 경험',
+        features: {
+          milestones: '인생 마일스톤: 성취 시스템으로 인생 레벨업',
+          smartGallery: '전문 갤러리: 마일스톤 카드를 클릭하여 전용 앨범 보기',
+          smartTags: '스마트 인식: 피트니스, 독서, 사진 등 테마 자동 분류',
+          garden3d: '몰입형 3D 정원: 생태계 속에서 자라나는 추억을 지켜보세요',
+          weather: '감정 날씨 시스템: 비는 성장의 밑거름이 됩니다',
+          models: '사실적인 3D 식물 모델과 섬세한 인터랙션',
+          colorDna: '새로운 Color DNA 엔진: 성운 중력장 UI',
+          planetUI: '3D 유리 행성과 절차적 별 생성',
+          shareCard: '새로운 "공유 카드": 폴라로이드 스타일 이미지 생성',
+          qr: '친구들과 쉽게 공유할 수 있는 QR 코드',
+          download: '인스타그램/위챗/트위터 원클릭 공유',
+          darkMode: '다크 모드 지원 추가',
+          theme: '5가지 테마 컬러 선택 가능',
+          ui: '더 부드러운 UI 애니메이션',
+          readability: '텍스트 가독성 개선',
+          vision: '자동 태깅을 위한 Google Vision AI 통합',
+          analysis: '사진 콘텐츠 기반 스마트 기분 분석',
+          coupleSync: '커플 공간: 실시간 듀얼 타임라인 동기화',
+          coupleShare: '프라이빗 인터랙션: 둘만의 댓글 및 반응',
+          insightsCharts: '무드 히트맵: 감정의 1년을 픽셀로 시각화',
+          insightsStreak: '데이터 통계: 연속 기록, 주요 기분 등',
+          mapView: '발자국 지도: 세계 지도에서 여정 확인',
+          mapInteraction: '위치 클러스터링 및 스마트 줌',
+          printShop: '인화소: 디지털 추억을 실물 앨범으로',
+          printCart: '장바구니 및 주문 관리 시스템',
+          init: 'The Genesis: 모든 것의 시작',
+          basic: '핵심 타임라인 및 사진 업로드 기능',
+          responsive: '모든 기기에서 원활한 모바일 경험',
+          pwa: 'PWA 지원: 네이티브 앱처럼 설치'
+        }
+      },
+      profile: {
+        title: '프로필 수정',
+        changePhoto: '카메라 아이콘을 눌러 사진 변경',
+        fullName: '이름',
+        username: '사용자 이름 (고유)',
+        usernameHint: '친구 추가를 위한 고유 ID가 됩니다.',
+        cancel: '취소',
+        save: '저장',
+        success: '프로필이 업데이트되었습니다!',
+        error: '업데이트 실패',
+        uploadError: '이미지를 선택해주세요.',
+        placeholderName: '이름',
+        placeholderUsername: '사용자 이름'
+      },
+      footer: {
+        about: '소개',
+        privacy: '개인정보처리방침',
+        terms: '이용약관',
+        contact: '문의하기',
+        madeWith: 'Made with',
+        forLovers: 'for life lovers',
+        rights: 'Photo Diary'
+      },
+      timeline: {
+        title: '타임라인',
+        subtitle: '사진으로 기록하는 당신의 하루.',
+        empty: '아직 기록이 없어요',
+        start: '첫 번째 사진을 올려보세요!',
+        search: '추억 검색...',
+        filter: '기분별 필터',
+        all: '모든 기분',
+        today: '오늘',
+        yesterday: '어제'
+      },
+      couple: {
+        title: '커플 공간',
+        subtitle: '우리 둘만의 공간. 왼쪽은 나, 오른쪽은 너.',
+        noGroup: '선택된 그룹이 없습니다. 그룹을 만들고 연인을 초대하세요!',
+        selectGroup: '상단에서 그룹을 선택해주세요',
+        noMemories: '아직 공유된 추억이 없네요.',
+        startSharing: '사진을 찍어 타임라인을 채워보세요!'
+      },
+      insights: {
+        title: '추억 통계',
+        subtitle: '내 삶의 패턴을 발견해보세요.',
+        yearInPixels: '무드 픽셀',
+        pixelDesc: '픽셀 하나하나가 당신의 하루입니다.',
+        noData: '데이터 없음',
+        mood: '기분',
+        stats: '통계',
+        totalEntries: '총 기록',
+        totalTags: '태그 수',
+        currentStreak: '연속 기록',
+        topMood: '주요 기분',
+        placesVisited: '방문한 장소'
+      },
+      form: {
+        titleAdd: '새로운 기록',
+        titleEdit: '기록 수정',
+        upload: '사진 업로드',
+        uploadDesc: '이 순간을 담아보세요',
+        captionPlaceholder: '지금 무슨 생각을 하고 있나요?',
+        locationPlaceholder: '여기는 어디인가요?',
+        moodLabel: '오늘 기분은 어떤가요?',
+        dateLabel: '날짜',
+        shareLabel: '그룹에 공유하기',
+        private: '나만의 일기',
+        save: '저장하기',
+        saving: '저장 중...',
+        delete: '삭제하기',
+        confirmDelete: '정말 이 추억을 삭제하시겠습니까?',
+        aiTags: 'AI 태그'
+      },
+      print: {
+        title: '사진 인화',
+        subtitle: '디지털 추억을 실물로 간직하세요.',
+        cart: '장바구니',
+        addToCart: '담기',
+        checkout: '결제하기',
+        polaroid: '폴라로이드 스타일',
+        postcard: '엽서',
+        photobook: '포토북',
+        price: '₩{{price}}',
+        theYearOf: '올해의',
+        introduction: '들어가며',
+        mood: '기분',
+        theEnd: '끝',
+        flipInstruction: '방향키나 모서리를 클릭하여 넘기기'
+      },
+      account: {
+        title: '계정 및 친구',
+        myProfile: '내 프로필',
+        achievements: '활동 배지',
+        friends: '친구 목록',
+        signOut: '로그아웃',
+        editProfile: '프로필 수정',
+        friendId: '친구 ID',
+        email: '이메일',
+        anonymous: '익명 사용자',
+        noUsername: '사용자 이름 없음',
+        generating: '생성 중...',
+        addFriend: '친구 추가',
+        enterEmail: '친구 이메일 입력',
+        sendRequest: '요청 보내기',
+        friendRequests: '새로운 친구 요청',
+        yourFriends: '내 친구들',
+        noFriends: '친구가 없습니다. 초대해보세요!',
+        removeFriend: '친구 삭제',
+        confirmRemove: '{{name}} 님을 친구 목록에서 삭제하시겠습니까?',
+        language: '언어 설정',
+        theme: '테마'
+      },
+      subscription: {
+        payment: {
+          secure: '256비트 SSL 암호화 결제',
+          scanTip: '앱으로 스캔',
+          uploadTip: '팁: 개인정보 보호를 위해 후원 플랫폼 QR 코드를 사용하는 것이 좋습니다.',
+          openLink: '또는 결제 링크 열기'
+        }
+      },
+      common: {
+        loading: '로딩 중...',
+        saving: '저장 중...',
+        success: '성공',
+        error: '오류 발생',
+        cancel: '취소',
+        save: '저장',
+        delete: '삭제',
+        edit: '수정',
+        back: '뒤로'
+      },
+      moods: {
+        happy: '행복',
+        sad: '슬픔',
+        excited: '신남',
+        tired: '피곤',
+        neutral: '평온',
+        angry: '화남',
+        grateful: '감사',
+        anxious: '불안',
+        calm: '차분',
+        inspired: '영감',
+        stressed: '스트레스',
+        energetic: '활기'
+      }
+    }
+  }
+};
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false 
+    }
+  });
+
+export default i18n;

@@ -56,4 +56,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://traem2c66pq6.vercel.app',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

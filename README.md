@@ -1,64 +1,53 @@
-# Photo Diary - Recovery Project
+# Photo Diary 📸
 
-This project has been recovered from a Vercel backup structure.
+> **Capture Your Life Moments**  
+> A private, beautiful, and intelligent space to document your life's journey.
 
-## Quick Start
+![Banner](public/favicon.svg)
 
-1.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+## ✨ About
 
-2.  **Environment Setup**
-    Copy `.env.example` to `.env.local` and fill in the required values:
-    ```bash
-    cp .env.example .env.local
-    ```
-    Required variables:
-    - `VITE_SUPABASE_URL`
-    - `VITE_SUPABASE_ANON_KEY`
+Photo Diary is more than just a journal. It's a companion that helps you pause, capture, and cherish the fleeting moments of your life. Whether it's a perfect cup of coffee, a beautiful sunset, or a laugh shared with a friend, Photo Diary keeps these memories safe and vivid.
 
-3.  **Development**
-    ```bash
-    npm run dev
-    ```
+## 🚀 Features
 
-4.  **Build**
-    ```bash
-    npm run build
-    ```
+- **📝 Rich Entries**: Record photos, moods, locations, and stories.
+- **🤖 AI Insights**: visualize your mood trends and rediscover "On This Day" memories.
+- **👁️ Smart Tags**: Automatically recognize photo contents using on-device AI.
+- **🗺️ Map View**: See your memories plotted on a global map.
+- **📅 Calendar & Timeline**: Browse your past in the way that suits you best.
+- **🔒 Private & Secure**: Your data is yours. Local-first architecture with optional cloud sync.
 
-## Recovery Details
+## 🛠️ Tech Stack
 
-The following steps were taken to restore the project integrity:
-- **Configuration Restoration**: Recreated `package.json`, `tsconfig.json`, `vite.config.ts`, and `.gitignore`.
-- **Dependency Locking**: Generated `package-lock.json` with compatible versions (React 18, Vite 6).
-- **Code Quality**: Added ESLint configuration and fixed build errors.
-- **CI/CD**: Added GitHub Actions workflows for CI (`.github/workflows/ci.yml`) and Weekly Backups (`.github/workflows/backup.yml`).
+- **Frontend**: React, TypeScript, Tailwind CSS, Vite
+- **UI Components**: Shadcn/ui, Lucide Icons
+- **AI/ML**: TensorFlow.js (MobileNet)
+- **Charts**: Recharts
+- **Maps**: Leaflet / React-Leaflet
+- **Backend**: Supabase (Edge Functions, Storage, Database)
 
-## Branch Strategy
+## 🏃‍♂️ Getting Started
 
-- **main**: Protected branch. Deploys to Production.
-- **vercel-recovery**: Initial recovery branch.
-- **feature/*** : For new features.
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## Deployment
+2. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-### GitHub Setup
-Since the automated tool could not create the repository, please follow these steps:
+3. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-1.  Create a new repository on GitHub named `project-recovery`.
-2.  Push the local code:
-    ```bash
-    git remote add origin https://github.com/YOUR_USERNAME/project-recovery.git
-    git branch -M main
-    git push -u origin main
-    ```
+## 📄 License
 
-### Vercel Integration
-1.  Import the `project-recovery` repository in Vercel.
-2.  Configure Environment Variables in Vercel Settings.
-3.  Deploy.
+This project is proprietary software. All rights reserved.
 
-## Rollback
-To rollback to a previous version, use the Vercel Dashboard "Instant Rollback" feature or revert the commit in GitHub and wait for the CI/CD pipeline to redeploy.
+## 📞 Contact
+
+For support or inquiries, please contact: support@photodiary.com

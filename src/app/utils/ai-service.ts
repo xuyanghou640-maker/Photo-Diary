@@ -1,50 +1,50 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import type { DiaryEntry } from '../components/diary-entry-form';
 
 export class AIService {
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: any = null;
+  private openai: OpenAI | null = null;
+  private apiKey: string = '';
 
   constructor(apiKey?: string) {
-    // Priority: Constructor argument > Environment Variable
-    const key = apiKey || import.meta.env.VITE_GOOGLE_AI_KEY;
+    // Qwen API (Aliyun Bailian) Endpoint
+    // Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+    const key = apiKey || import.meta.env.VITE_QWEN_API_KEY;
     if (key) {
       this.init(key);
     }
   }
 
   init(apiKey: string) {
+    this.apiKey = apiKey;
     try {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+      this.openai = new OpenAI({
+        apiKey: apiKey,
+        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        dangerouslyAllowBrowser: true // Allowed for this client-side demo, ideally use backend proxy
+      });
     } catch (error) {
       console.error('Failed to initialize AI Service:', error);
-      this.model = null;
+      this.openai = null;
     }
   }
 
   isConfigured(): boolean {
-    // We are configured if we have a local model OR if we are in production (assuming backend is set up)
-    // Actually, let's keep it simple: returns true always, and we try backend if local fails?
-    // Or better: check for key OR assume backend.
-    // For now, let's return true so the UI shows "Powered by Site AI" if no local key but backend might work.
-    // But to be safe, let's stick to the previous logic + backend check.
-    return !!this.model || true; // Always allow trying the request, as it might go to backend
+    return !!this.openai;
   }
   
   hasGlobalKey(): boolean {
-    // If we have a VITE key, it's global.
-    // BUT, if we are using the backend proxy, we effectively have a "global key" from the user's perspective.
-    // So let's return true to hide the settings panel if we are in a mode where backend is expected.
-    // For this specific user request, they want to hide the settings.
-    return !!import.meta.env.VITE_GOOGLE_AI_KEY || true; 
+    return !!import.meta.env.VITE_QWEN_API_KEY;
   }
 
   async generateResponse(query: string, entries: DiaryEntry[], mood?: string): Promise<string> {
+    if (!this.openai) {
+      return "Please configure your Qwen API Key first.";
+    }
+
     // Prepare context
     const recentEntries = entries
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 20)
+      .slice(0, 15) // Qwen handles long context well, but let's keep it focused
       .map(e => ({
         date: new Date(e.date).toLocaleDateString(),
         mood: e.mood,
@@ -52,54 +52,53 @@ export class AIService {
         tags: e.tags?.join(', ')
       }));
 
-    const prompt = `
-      You are a warm, empathetic, and insightful diary companion. 
-      The user is asking you a question or sharing a thought.
+    // System Prompt - Identity & Style
+    const systemPrompt = `
+      You are "Photo Diary AI", a warm, empathetic, and insightful personal memory assistant.
+      Your goal is to help the user reflect on their life, find patterns in their moods, and cherish their memories.
       
-      Here is the context of the user's recent diary entries (memories):
+      CORE PERSONALITY:
+      - Warm & Supportive: Like a close friend who knows you well.
+      - Insightful: Connect dots between past and present events.
+      - Gentle: If the user is sad, be comforting. If happy, celebrate with them.
+      - Concise: Keep answers under 150 words unless asked for a detailed story.
+
+      CONTEXT AWARENESS:
+      - You have access to the user's recent diary entries (provided in the prompt).
+      - Use specific dates and details from their diary to make your answers personal.
+      - If the user asks about something NOT in the diary, politely say you don't recall that memory but ask them to tell you about it.
+
+      LANGUAGE:
+      - Detect the language of the user's query (Chinese/English/Japanese/Korean).
+      - Reply in the SAME language as the user.
+      - If replying in Chinese, use a natural, modern, and warm tone (e.g. "记得那天...", "真为你开心...").
+    `;
+
+    // User Context Construction
+    const userContext = `
+      [User's Recent Memories]
       ${JSON.stringify(recentEntries, null, 2)}
 
+      [Current Context]
+      User's Current Mood: ${mood || 'Unknown'}
       User's Query: "${query}"
-
-      Instructions:
-      1. Answer the user's query based *only* on the provided diary entries if asking about the past.
-      2. If the user asks about something not in the diary, give a general supportive answer but mention you don't have a record of it.
-      3. Be conversational and friendly. Use the user's language (if they ask in Chinese, answer in Chinese).
-      4. If the user seems sad, offer comfort. If happy, celebrate with them.
-      5. Keep the response concise but meaningful.
-      
-      ${mood ? `Current Context: The user is currently feeling ${mood}.` : ''}
     `;
 
     try {
-      // 1. Try Local Client-Side Call (if configured)
-      if (this.model) {
-        console.log('Using local/client-side Gemini key');
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
-      }
-      
-      // 2. Fallback to Backend Proxy (Safe Method)
-      console.log('Using backend API proxy');
-      const response = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt }),
+      console.log('Calling Qwen API...');
+      const completion = await this.openai.chat.completions.create({
+        model: "qwen-turbo", // Cost-effective and fast model
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContext }
+        ],
       });
 
-      if (!response.ok) {
-        throw new Error(`Backend API Error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.content;
+      return completion.choices[0].message.content || "I'm thinking...";
 
     } catch (error) {
       console.error('AI Service Error:', error);
-      return "I'm having trouble connecting to my brain right now. Please try again later.";
+      return "I'm having trouble connecting to Qwen right now. Please check your API Key or network.";
     }
   }
 }

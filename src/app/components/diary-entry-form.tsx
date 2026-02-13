@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, Loader2, MapPin, Tag, X, Wand2, Users, Check, Lock, Sparkles, Calendar as CalendarIcon, Map as MapIcon } from 'lucide-react';
+import { Camera, Loader2, MapPin, Tag, X, Wand2, Users, Check, Lock, Sparkles, Calendar as CalendarIcon, Map as MapIcon, Clock } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import '@tensorflow/tfjs';
@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { wgs84ToGcj02, gcj02ToWgs84 } from '../utils/coord-transform';
 
 // Fix for default Leaflet icon not finding images
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -147,9 +148,10 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
       try {
         setCompressing(true);
         const options = {
-          maxSizeMB: 1,
+          maxSizeMB: 0.5, // Reduced for better performance
           maxWidthOrHeight: 1920,
           useWebWorker: true,
+          fileType: 'image/webp' as const
         };
         const compressedFile = await imageCompression(file, options);
         
@@ -203,15 +205,18 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
 
   const handleOpenMapPicker = () => {
     if (location) {
-        setPickerLocation({ lat: location.lat, lng: location.lng });
+        // location is WGS-84. Convert to GCJ-02 for display on Gaode Map
+        const [lat, lng] = wgs84ToGcj02(location.lat, location.lng);
+        setPickerLocation({ lat, lng });
     } else {
         // Default to somewhere or try to get current location without setting form state
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                setPickerLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+                const [lat, lng] = wgs84ToGcj02(position.coords.latitude, position.coords.longitude);
+                setPickerLocation({ lat, lng });
             },
             () => {
-                setPickerLocation({ lat: 35.6895, lng: 139.6917 }); // Default to Tokyo or similar
+                setPickerLocation({ lat: 39.9042, lng: 116.4074 }); // Default to Beijing (GCJ-02 approx)
             }
         );
     }
@@ -220,9 +225,11 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
 
   const confirmMapLocation = () => {
     if (pickerLocation) {
+        // pickerLocation is GCJ-02 (from map click). Convert back to WGS-84 for storage.
+        const [lat, lng] = gcj02ToWgs84(pickerLocation.lat, pickerLocation.lng);
         setLocation({
-            lat: pickerLocation.lat,
-            lng: pickerLocation.lng,
+            lat,
+            lng,
             name: 'Selected on Map'
         });
     }
@@ -368,16 +375,36 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
   return (
     <>
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-6">
+      {/* Date & Time Selection */}
       <div className="text-center">
         <h2 className="text-2xl mb-2">{isEdit ? t('form.titleEdit') : t('form.titleAdd')}</h2>
-        <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
-            <CalendarIcon className="w-4 h-4" />
-            <input 
-                type="date" 
-                value={format(new Date(date), 'yyyy-MM-dd')}
-                onChange={handleDateChange}
-                className="bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none text-center w-32"
-            />
+        <div className="flex items-center justify-center gap-4 text-gray-500 text-sm">
+            <div className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
+                <input 
+                    type="date" 
+                    value={format(new Date(date), 'yyyy-MM-dd')}
+                    onChange={handleDateChange}
+                    className="bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none text-center w-32"
+                />
+            </div>
+            <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <input 
+                    type="time" 
+                    value={format(new Date(date), 'HH:mm')}
+                    onChange={(e) => {
+                        const timeStr = e.target.value;
+                        if (!timeStr) return;
+                        const [hours, minutes] = timeStr.split(':').map(Number);
+                        const newDate = new Date(date);
+                        newDate.setHours(hours);
+                        newDate.setMinutes(minutes);
+                        setDate(newDate.toISOString());
+                    }}
+                    className="bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none text-center w-20"
+                />
+            </div>
         </div>
       </div>
 
@@ -637,8 +664,8 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
                             style={{ height: '100%', width: '100%' }}
                         >
                             <TileLayer
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='Map data &copy; <a href="https://www.amap.com/">Gaode</a> contributors'
+                                url="https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}"
                             />
                             <LocationMarker 
                                 position={pickerLocation} 

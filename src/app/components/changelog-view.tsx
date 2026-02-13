@@ -11,6 +11,15 @@ interface Release {
 }
 
 const releases: Release[] = [
+  // Feb 13
+  {
+    version: 'v3.5.0',
+    date: '2026-02-13',
+    titleKey: 'changelog.print',
+    icon: Printer,
+    color: 'bg-cyan-100 text-cyan-700',
+    changesKey: 'changelog.features.printShopV2'
+  },
   // Feb 12
   {
     version: 'v3.3.0',
@@ -127,6 +136,16 @@ export function ChangelogView() {
 
   // Helper to get changes array based on version
   const getChanges = (version: string) => {
+    if (version === 'v3.5.0') return [
+      t('changelog.features.printShopV2'),
+      t('changelog.features.printEditor'),
+      t('changelog.features.shareOnline')
+    ];
+    if (version === 'v3.4.0') return [
+      t('changelog.features.mapV2'),
+      t('changelog.features.aiV2'),
+      t('changelog.features.visuals')
+    ];
     if (version === 'v3.3.0') return [
       t('changelog.features.milestones'),
       t('changelog.features.smartGallery'),

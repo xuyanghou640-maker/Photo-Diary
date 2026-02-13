@@ -1,11 +1,19 @@
 import { useState, useMemo, useEffect, useRef, forwardRef } from 'react';
-import { Book, ChevronRight, Check, Printer, Calendar, Camera, FileText, ShoppingBag, BookOpen, X, ChevronLeft, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
+import { createRoot } from 'react-dom/client';
+import { Book, ChevronRight, Check, Printer, Calendar, Camera, FileText, ShoppingBag, BookOpen, X, ChevronLeft, ArrowRight, ArrowLeft, AlertCircle, Share2, Download, Layout, Link as LinkIcon, Globe, Edit3, GripVertical, Image as ImageIcon } from 'lucide-react';
 import { DiaryEntry } from './diary-entry-form';
 import { format } from 'date-fns';
 import HTMLFlipBook from 'react-pageflip';
 import { useTranslation } from 'react-i18next';
 import { LazyImage } from './ui/lazy-image';
 import { toast } from 'react-hot-toast';
+import { generateBookLayout, LayoutStyle, BookPage } from '../utils/layout-engine';
+import { generatePDF } from '../utils/pdf-generator';
+import { useSearchParams } from 'react-router-dom';
+import { shareBook } from '../services/book-service';
+import { MockBookPreview } from './book-preview';
+import { Reorder, useDragControls } from 'framer-motion';
+import { Checkbox } from '../components/ui/checkbox'; // Assuming you have this or standard input
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,66 +25,17 @@ import {
 } from "../components/ui/alert-dialog";
 
 interface PrintShopViewProps {
-  entries?: DiaryEntry[]; // Make optional to be safe
+  entries?: DiaryEntry[];
 }
-
-// Mock Data Generator for Book Preview
-const MOCK_BOOK_PAGES = [
-  {
-    type: 'cover',
-    title: '2026',
-    subtitle: 'The Story of Us',
-  },
-  {
-    type: 'intro',
-    text: "This year was filled with unforgettable moments, laughter, and growth. Here are the highlights of my journey...",
-  },
-  {
-    type: 'entry',
-    date: '2026-01-15',
-    mood: 'Excited',
-    location: 'Paris, France',
-    photo: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop&q=60',
-    caption: 'First day in Paris! The Eiffel Tower is even more beautiful in person. Can\'t wait to explore the Louvre tomorrow. 🥐🇫🇷',
-  },
-  {
-    type: 'entry',
-    date: '2026-02-14',
-    mood: 'Loved',
-    location: 'Central Park, NY',
-    photo: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&auto=format&fit=crop&q=60',
-    caption: 'Valentine\'s Day picnic. The weather was surprisingly warm. So grateful for these little moments.',
-  },
-  {
-    type: 'collage',
-    photos: [
-      'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&auto=format&fit=crop&q=60',
-      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60',
-      'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&auto=format&fit=crop&q=60'
-    ],
-    caption: 'Spring Adventures 🌸',
-  },
-  {
-    type: 'entry',
-    date: '2026-06-20',
-    mood: 'Relaxed',
-    location: 'Bali, Indonesia',
-    photo: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop&q=60',
-    caption: 'Sunset by the beach. The sound of waves is the best therapy. 🌊🍹',
-  },
-  {
-    type: 'outro',
-    text: "To be continued...",
-  }
-];
 
 export function PrintShopView({ entries = [] }: PrintShopViewProps) {
   const { t } = useTranslation();
-  // Error State
-  const [error, setError] = useState<string | null>(null);
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   // Safe State Initialization
   const [selectedYear, setSelectedYear] = useState<string>(() => {
+    const urlYear = searchParams.get('year');
+    if (urlYear) return urlYear;
     try {
       return new Date().getFullYear().toString();
     } catch (e) {
@@ -84,10 +43,37 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
     }
   });
   
-  const [coverType, setCoverType] = useState<'soft' | 'hard'>('hard');
+  const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>(() => {
+    const urlStyle = searchParams.get('style');
+    return (urlStyle as LayoutStyle) || 'classic';
+  });
+
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(() => {
+    return searchParams.get('mode') === 'preview';
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Editor State
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [customOrderedEntries, setCustomOrderedEntries] = useState<DiaryEntry[]>([]);
+  const [excludedEntryIds, setExcludedEntryIds] = useState<Set<string>>(new Set());
+  const [customCoverPhoto, setCustomCoverPhoto] = useState<string | null>(null);
+
+  // Update URL when state changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set('year', selectedYear);
+    params.set('style', layoutStyle);
+    if (isPreviewOpen) {
+      params.set('mode', 'preview');
+    } else {
+      params.delete('mode');
+    }
+    setSearchParams(params, { replace: true });
+  }, [selectedYear, layoutStyle, isPreviewOpen]);
 
   // Defensive: Ensure entries is an array
   const safeEntries = useMemo(() => {
@@ -122,22 +108,102 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
     });
   }, [safeEntries, selectedYear]);
 
+  // Initialize custom order when year changes
+  useEffect(() => {
+    setCustomOrderedEntries(yearEntries);
+    setExcludedEntryIds(new Set());
+    setCustomCoverPhoto(null);
+  }, [yearEntries]);
+
+  const finalEntries = useMemo(() => {
+    // Filter out excluded IDs
+    return customOrderedEntries.filter(e => !excludedEntryIds.has(e.id));
+  }, [customOrderedEntries, excludedEntryIds]);
+
+  const bookPages = useMemo(() => {
+    if (finalEntries.length === 0) return [];
+    
+    // Generate pages
+    const pages = generateBookLayout(finalEntries, selectedYear, layoutStyle, t);
+    
+    // Override cover photo if custom selected
+    if (customCoverPhoto && pages.length > 0 && pages[0].type === 'cover') {
+        pages[0].coverPhoto = customCoverPhoto;
+    }
+    
+    return pages;
+  }, [finalEntries, selectedYear, layoutStyle, t, customCoverPhoto]);
+
   // Calculate stats safely
-  const photoCount = yearEntries.reduce((acc, entry) => acc + (entry?.photo ? 1 : 0), 0);
-  // Just for display, if 0, assume mock count
-  const displayPhotoCount = photoCount > 0 ? photoCount : 124;
-  const estimatedPages = Math.max(20, yearEntries.length * 1.5); 
-  const displayPages = photoCount > 0 ? Math.ceil(estimatedPages) : 42;
+  const photoCount = finalEntries.reduce((acc, entry) => acc + (entry?.photo ? 1 : 0), 0);
+  const displayPhotoCount = photoCount > 0 ? photoCount : 0;
+  const displayPages = bookPages.length;
 
-  // Calculate price
-  // Digital Base Price: $0.99 (Platform Fee)
-  // Per Page Cost: $0.05
-  const basePrice = 0.99;
-  const pageCost = displayPages * 0.05;
-  const totalPrice = (basePrice + pageCost).toFixed(2);
+  const handlePrint = async () => {
+    try {
+      setIsGenerating(true);
+      setShowOrderSuccess(true);
+    } catch (e) {
+      console.error(e);
+      toast.error(t('common.error'));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
-  const handleOrder = () => {
-    toast.success("Printing Service Coming Soon!");
+  const downloadPDF = async () => {
+     setIsGenerating(true);
+     toast.loading(t('print.generating'), { id: 'pdf-gen' });
+
+     try {
+         const doc = await generatePDF(bookPages, selectedYear, t, (progress) => {
+             toast.loading(`${t('print.generating')} (${Math.round(progress * 100)}%)`, { id: 'pdf-gen' });
+         });
+         
+         doc.save(`PhotoDiary-${selectedYear}-${layoutStyle}.pdf`);
+         toast.success(t('common.success'), { id: 'pdf-gen' });
+         setShowOrderSuccess(false); // Close modal on success
+         
+     } catch (e) {
+         console.error(e);
+         toast.error(t('export.failed'), { id: 'pdf-gen' });
+     } finally {
+         setIsGenerating(false);
+     }
+  };
+
+
+  const handleShareOnline = async () => {
+    try {
+        setIsSharing(true);
+        toast.loading(t('print.sharing') || 'Publishing book...', { id: 'share-book' });
+        
+        const sharedBook = await shareBook(selectedYear, layoutStyle, bookPages);
+        
+        // Construct public link
+        const url = `${window.location.origin}/share/book/${sharedBook.id}`;
+        
+        navigator.clipboard.writeText(url).then(() => {
+            toast.success(t('print.linkCopied') || 'Link copied!', { id: 'share-book', duration: 4000 });
+        });
+        
+        setShowOrderSuccess(false);
+    } catch (e) {
+        console.error(e);
+        toast.error(t('common.error') || 'Failed to share', { id: 'share-book' });
+    } finally {
+        setIsSharing(false);
+    }
+  };
+
+  const toggleEntrySelection = (id: string) => {
+    const newSet = new Set(excludedEntryIds);
+    if (newSet.has(id)) {
+        newSet.delete(id);
+    } else {
+        newSet.add(id);
+    }
+    setExcludedEntryIds(newSet);
   };
 
   if (error) {
@@ -157,7 +223,81 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+      
+      {/* Editor Overlay */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm z-10">
+                <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Edit3 className="w-5 h-5 text-blue-600" />
+                        {t('print.editorTitle') || 'Customize Book Content'}
+                    </h2>
+                    <p className="text-sm text-gray-500">{finalEntries.length} photos selected</p>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setIsEditorOpen(false)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                        {t('common.done') || 'Done'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Main Content - Two Columns */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Left: Reorderable List */}
+                <div className="flex-1 overflow-y-auto p-8 bg-gray-50 dark:bg-gray-900/50">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
+                            <span>Drag to reorder • Uncheck to remove</span>
+                        </div>
+                        
+                        <Reorder.Group axis="y" values={customOrderedEntries} onReorder={setCustomOrderedEntries} className="space-y-3">
+                            {customOrderedEntries.map((entry) => (
+                                <Reorder.Item key={entry.id} value={entry} className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 group cursor-grab active:cursor-grabbing">
+                                    <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
+                                        <GripVertical className="w-5 h-5" />
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                            {entry.photo && <img src={entry.photo} className={`w-full h-full object-cover transition-opacity ${excludedEntryIds.has(entry.id) ? 'opacity-30 grayscale' : ''}`} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium truncate text-gray-900 dark:text-gray-100">{format(new Date(entry.date), 'MMM d, yyyy')}</div>
+                                            <div className="text-sm text-gray-500 truncate">{entry.caption || 'No caption'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        {/* Cover Selection */}
+                                        <button 
+                                            onClick={() => setCustomCoverPhoto(entry.photo)}
+                                            className={`p-2 rounded-lg text-xs font-medium transition-colors ${customCoverPhoto === entry.photo ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:bg-gray-100'}`}
+                                            title="Set as Cover Photo"
+                                        >
+                                            <ImageIcon className="w-4 h-4" />
+                                        </button>
+
+                                        {/* Include/Exclude Toggle */}
+                                        <Checkbox 
+                                            checked={!excludedEntryIds.has(entry.id)}
+                                            onCheckedChange={() => toggleEntrySelection(entry.id)}
+                                        />
+                                    </div>
+                                </Reorder.Item>
+                            ))}
+                        </Reorder.Group>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400">
@@ -178,7 +318,7 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
                  {/* Texture overlay */}
                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-20 pointer-events-none"></div>
                  
-                <div className="mt-8 text-xs tracking-[0.2em] text-amber-400 uppercase relative z-10">Year Book</div>
+                <div className="mt-8 text-xs tracking-[0.2em] text-amber-400 uppercase relative z-10">{t('print.yearBook')}</div>
                 <div className="mt-4 text-6xl font-serif font-bold text-amber-100 relative z-10">{selectedYear}</div>
                 <div className="mt-auto mb-12 space-y-2 relative z-10 w-full">
                   <div className="w-32 h-32 rounded-full bg-gray-200 overflow-hidden border-4 border-white/20 mx-auto shadow-inner flex items-center justify-center relative">
@@ -189,7 +329,7 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
                        <LazyImage src="https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&auto=format&fit=crop&q=60" alt="Default Cover" className="w-full h-full object-cover opacity-80" />
                      )}
                   </div>
-                  <p className="font-serif text-lg italic text-amber-100/80">My Photo Diary</p>
+                  <p className="font-serif text-lg italic text-amber-100/80">{t('print.myPhotoDiary')}</p>
                 </div>
               </div>
               
@@ -215,7 +355,7 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30">
             <div className="bg-black/50 text-white px-4 py-2 rounded-full backdrop-blur-sm flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
-              <span>Click to Preview</span>
+              <span>{t('print.clickToPreview')}</span>
             </div>
           </div>
         </div>
@@ -228,14 +368,14 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
             <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl">
               <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
                 <Camera className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase">Photos</span>
+                <span className="text-xs font-bold uppercase">{t('print.photos')}</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{displayPhotoCount}</div>
             </div>
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl">
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
                 <FileText className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase">Pages</span>
+                <span className="text-xs font-bold uppercase">{t('print.pages')}</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{displayPages}</div>
             </div>
@@ -244,7 +384,7 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
           {/* Configuration */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Year</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('print.selectYear')}</label>
               <div className="flex flex-wrap gap-2">
                 {years.map(year => (
                   <button
@@ -263,7 +403,65 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Format</label>
+                <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('print.content') || 'Content'}</label>
+                    <button 
+                        onClick={() => setIsEditorOpen(true)}
+                        className="text-sm text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                    >
+                        <Edit3 className="w-3 h-3" />
+                        {t('print.customize') || 'Customize'}
+                    </button>
+                </div>
+                <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between">
+                    <div className="text-sm">
+                        <span className="font-bold text-gray-900 dark:text-white">{finalEntries.length}</span> photos selected
+                    </div>
+                    {customCoverPhoto && (
+                        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-md">
+                            <ImageIcon className="w-3 h-3" />
+                            Custom Cover
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('print.layoutStyle')}</label>
+              <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setLayoutStyle('classic')}
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${layoutStyle === 'classic' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <div className="w-4 h-4 border border-current rounded-sm"></div>
+                    {t('print.styles.classic')}
+                  </button>
+                  <button
+                    onClick={() => setLayoutStyle('grid')}
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${layoutStyle === 'grid' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <div className="w-4 h-4 border border-current rounded-sm grid grid-cols-2 gap-[1px] p-[1px]"><div className="bg-current"></div><div className="bg-current"></div><div className="bg-current"></div><div className="bg-current"></div></div>
+                    {t('print.styles.grid')}
+                  </button>
+                  <button
+                    onClick={() => setLayoutStyle('magazine')}
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${layoutStyle === 'magazine' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <Layout className="w-4 h-4" />
+                    {t('print.styles.magazine')}
+                  </button>
+                  <button
+                    onClick={() => setLayoutStyle('minimal')}
+                    className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${layoutStyle === 'minimal' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                     <div className="w-4 h-4 border border-current rounded-sm flex items-center justify-center"><div className="w-2 h-2 bg-current rounded-full"></div></div>
+                    {t('print.styles.minimal')}
+                  </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('print.format')}</label>
               <div className="p-4 rounded-xl border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 relative">
                 <div className="flex justify-between items-start">
                   <div>
@@ -272,12 +470,11 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
                       {t('print.photobook')}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Includes interactive flipbook link + downloadable PDF
+                      {t('print.formatDesc')}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-blue-600">{t('print.price', { price: '0.99' })}</div>
-                    <div className="text-[10px] text-gray-400">+ {t('print.price', { price: '0.05' })}/page</div>
+                    <div className="font-bold text-green-600 text-lg">{t('print.free')}</div>
                   </div>
                 </div>
                 <div className="absolute top-2 right-2 text-blue-500 opacity-0">
@@ -287,23 +484,20 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
             </div>
           </div>
 
-          {/* Checkout Area */}
+          {/* Print Area */}
           <div className="border-t border-gray-100 dark:border-gray-700 pt-6">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-gray-500 dark:text-gray-400">Total Estimate</span>
-              <span className="text-3xl font-bold text-gray-900 dark:text-white">{t('print.price', { price: totalPrice })}</span>
-            </div>
             
             <button 
-              onClick={handleOrder}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+              onClick={handlePrint}
+              disabled={isGenerating}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Printer className="w-5 h-5" />
+              {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div> : <Printer className="w-5 h-5" />}
               {t('print.checkout')}
             </button>
             <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
               <ShoppingBag className="w-3 h-3" />
-              Free shipping worldwide
+              Free digital download & print-ready PDF
             </p>
           </div>
         </div>
@@ -314,16 +508,53 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-green-600">
               <Check className="w-6 h-6" />
-              {t('subscription.payment.success')}
+              {t('print.successTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t('subscription.payment.confirmed')}
+              {t('print.successDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowOrderSuccess(false)}>
-              OK
-            </AlertDialogAction>
+          <AlertDialogFooter className="sm:justify-center gap-2 flex-col sm:flex-row">
+             <button
+               onClick={downloadPDF}
+               className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+             >
+               <Download className="w-4 h-4" />
+               {t('print.downloadPDF')}
+             </button>
+             
+             <button
+               onClick={handleShareOnline}
+               disabled={isSharing}
+               className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+             >
+               {isSharing ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <Globe className="w-4 h-4" />}
+               {t('print.shareOnline') || 'Share Online'}
+             </button>
+
+             <button
+               onClick={() => {
+                 // Create deep link to this specific book configuration (Local only)
+                 const url = new URL(window.location.href);
+                 url.searchParams.set('year', selectedYear);
+                 url.searchParams.set('style', layoutStyle);
+                 url.searchParams.set('mode', 'preview'); // Auto-open preview
+                 
+                 navigator.clipboard.writeText(url.toString()).then(() => {
+                    toast.success(t('print.linkCopiedLocal') || 'Local Link Copied', {
+                        icon: '�',
+                        duration: 4000
+                    });
+                 }).catch(() => {
+                    toast.error(t('common.error'));
+                 });
+                 setShowOrderSuccess(false);
+               }}
+               className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors w-full sm:w-auto"
+             >
+               <Share2 className="w-4 h-4" />
+               {t('print.shareLinkLocal') || 'Local Link'}
+             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -332,6 +563,7 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
       {isPreviewOpen && (
         <MockBookPreview 
           year={selectedYear} 
+          pages={bookPages}
           onClose={() => setIsPreviewOpen(false)} 
         />
       )}
@@ -339,186 +571,3 @@ export function PrintShopView({ entries = [] }: PrintShopViewProps) {
   );
 }
 
-// --- Mock Book Preview Component ---
-
-interface MockBookPreviewProps {
-  year: string;
-  onClose: () => void;
-}
-
-const Page = forwardRef<HTMLDivElement, any>((props, ref) => {
-  return (
-    <div className="page bg-white shadow-md h-full" ref={ref}>
-      <div className="page-content h-full relative">
-        {props.children}
-      </div>
-    </div>
-  );
-});
-
-function MockBookPreview({ year, onClose }: MockBookPreviewProps) {
-  const { t } = useTranslation();
-  const bookRef = useRef<any>(null);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
-
-  useEffect(() => {
-    // Calculate total pages including cover and back
-    // MOCK_BOOK_PAGES length + 1 (Back Cover)
-    // Actually Flipbook manages pages automatically based on children
-    setTotalPages(MOCK_BOOK_PAGES.length + 1); // + Back Cover
-  }, []);
-
-  const onFlip = (e: any) => {
-    setCurrentPage(e.data);
-  };
-
-  const nextFlip = () => {
-    bookRef.current?.pageFlip()?.flipNext();
-  };
-
-  const prevFlip = () => {
-    bookRef.current?.pageFlip()?.flipPrev();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') nextFlip();
-      if (e.key === 'ArrowLeft') prevFlip();
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const renderPageContent = (page: any, index: number) => {
-    if (page.type === 'cover') {
-      return (
-        <div className="w-full h-full bg-blue-900 text-white flex flex-col items-center justify-center p-8 text-center relative overflow-hidden border-8 border-blue-950">
-           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-20 pointer-events-none"></div>
-           <div className="z-10 border-4 border-amber-400/20 p-8 w-full h-full flex flex-col items-center justify-center">
-             <div className="text-amber-400 tracking-[0.3em] uppercase text-sm mb-4">{t('print.theYearOf')}</div>
-             <h1 className="text-6xl font-serif font-bold text-amber-100 mb-8">{year}</h1>
-             <div className="w-32 h-32 rounded-full border-4 border-amber-100/30 overflow-hidden mb-8">
-               <img src="https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&auto=format&fit=crop&q=60" className="w-full h-full object-cover" />
-             </div>
-             <p className="text-xl font-light italic text-amber-200">{page.subtitle}</p>
-           </div>
-        </div>
-      );
-    }
-
-    if (page.type === 'intro') {
-      return (
-        <div className="w-full h-full bg-[#fdfbf7] p-12 flex flex-col items-center justify-center text-center">
-          <h2 className="text-3xl font-serif text-gray-800 mb-6">{t('print.introduction')}</h2>
-          <p className="text-lg text-gray-600 italic leading-relaxed max-w-md">{page.text}</p>
-          <div className="mt-auto text-xs text-gray-400">{index + 1}</div>
-        </div>
-      );
-    }
-
-    if (page.type === 'entry') {
-      return (
-        <div className="w-full h-full bg-[#fdfbf7] p-8 flex flex-col">
-           <div className="flex justify-between items-baseline border-b border-gray-200 pb-4 mb-6">
-             <h3 className="text-xl font-bold text-gray-900">{format(new Date(page.date!), 'MMMM d')}</h3>
-             <span className="text-xs text-gray-500 uppercase">{page.location}</span>
-           </div>
-           <div className="w-full aspect-video bg-gray-100 mb-6 rounded-lg overflow-hidden shadow-sm">
-             <img src={page.photo} className="w-full h-full object-cover" />
-           </div>
-           <p className="text-gray-700 font-serif leading-relaxed">{page.caption}</p>
-           <div className="mt-auto pt-4 flex justify-between items-center">
-             <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mood: {page.mood}</span>
-             <span className="text-xs text-gray-400">{index + 1}</span>
-           </div>
-        </div>
-      );
-    }
-
-    if (page.type === 'collage') {
-      return (
-        <div className="w-full h-full bg-[#fdfbf7] p-8 flex flex-col">
-          <div className="grid grid-cols-2 gap-4 flex-1 content-center">
-             {page.photos?.map((src: string, i: number) => (
-               <div key={i} className={`rounded-lg overflow-hidden shadow-sm ${i === 0 ? 'col-span-2 aspect-video' : 'aspect-square'}`}>
-                 <img src={src} className="w-full h-full object-cover" />
-               </div>
-             ))}
-          </div>
-          <p className="text-center font-serif italic text-gray-600 mt-6">{page.caption}</p>
-          <div className="mt-auto text-right text-xs text-gray-400">{index + 1}</div>
-        </div>
-      );
-    }
-
-    if (page.type === 'outro') {
-        return (
-            <div className="w-full h-full bg-[#fdfbf7] p-12 flex flex-col items-center justify-center text-center">
-              <p className="text-xl font-serif italic text-gray-500">{page.text}</p>
-              <div className="mt-auto text-xs text-gray-400">{index + 1}</div>
-            </div>
-        );
-    }
-
-    return null;
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
-      <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white z-50">
-        <X className="w-8 h-8" />
-      </button>
-
-      <div className="relative w-full h-full flex items-center justify-center">
-        {/* @ts-ignore - Library types might be tricky */}
-        <HTMLFlipBook
-          width={450}
-          height={600}
-          size="stretch"
-          minWidth={300}
-          maxWidth={600}
-          minHeight={400}
-          maxHeight={800}
-          maxShadowOpacity={0.5}
-          showCover={true}
-          mobileScrollSupport={true}
-          className="shadow-2xl"
-          ref={bookRef}
-          onFlip={onFlip}
-        >
-            {/* Front Cover */}
-            <Page>
-                {renderPageContent(MOCK_BOOK_PAGES[0], 0)}
-            </Page>
-
-            {/* Inner Pages */}
-            {MOCK_BOOK_PAGES.slice(1).map((page, index) => (
-                <Page key={index}>
-                    {renderPageContent(page, index + 1)}
-                </Page>
-            ))}
-
-            {/* Back Cover */}
-            <Page>
-                <div className="w-full h-full bg-blue-900 text-white flex flex-col items-center justify-center border-8 border-blue-950 relative">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-20 pointer-events-none"></div>
-                    <div className="z-10 text-center">
-                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <BookOpen className="w-8 h-8 text-amber-100" />
-                        </div>
-                        <p className="text-sm opacity-60">The End</p>
-                        <p className="text-xs opacity-40 mt-2">www.photodiary.com</p>
-                    </div>
-                </div>
-            </Page>
-        </HTMLFlipBook>
-      </div>
-      
-      <div className="absolute bottom-8 text-white/50 text-sm bg-black/50 px-4 py-2 rounded-full pointer-events-none">
-        {t('print.flipInstruction')}
-      </div>
-    </div>
-  );
-}

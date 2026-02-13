@@ -28,9 +28,25 @@ import { useAuth } from './context/AuthContext';
 import { useGroup } from './context/GroupContext';
 import { supabase } from './utils/supabaseClient';
 import { LoginForm } from './components/auth/login-form';
+import { offlineStorage } from './services/offline-storage';
 
 import { useTranslation } from 'react-i18next';
 import { ReloadPrompt } from './components/reload-prompt';
+
+import { AnimatePresence, motion } from 'framer-motion';
+
+import { SharedBookView } from './components/shared-book-view';
+
+const PageTransition = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.3, ease: "easeOut" }}
+  >
+    {children}
+  </motion.div>
+);
 
 export default function App() {
   return (
@@ -56,6 +72,15 @@ function AppContent() {
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useState(new URLSearchParams(location.search));
+
+  // Handle Deep Linking
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'print') {
+      navigate('/print' + location.search);
+    }
+  }, [searchParams, navigate]);
 
   const FloatingAIButton = () => (
     <button
@@ -79,19 +104,42 @@ function AppContent() {
   async function loadEntries() {
     try {
       setLoading(true);
-      const data = await fetchEntries();
-      setEntries(data);
-    } catch (error) {
-      console.error('Failed to load entries:', error);
-      // Fallback to localStorage
-      const stored = localStorage.getItem('photo-diary-entries');
-      if (stored) {
-        try {
-          setEntries(JSON.parse(stored));
-        } catch (e) {
-          console.error('Error parsing stored entries:', e);
+      
+      // 1. Try to load from IndexedDB first (Offline-first)
+      try {
+        const cachedEntries = await offlineStorage.getEntries();
+        if (cachedEntries.length > 0) {
+          setEntries(cachedEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        } else {
+          // Fallback to localStorage if IndexedDB is empty (migration path)
+          const stored = localStorage.getItem('photo-diary-entries');
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              setEntries(parsed);
+              // Migrate to IndexedDB
+              await offlineStorage.saveEntries(parsed);
+            } catch (e) {
+              console.error('Error parsing stored entries:', e);
+            }
+          }
         }
+      } catch (dbError) {
+        console.error('Failed to load from offline storage:', dbError);
       }
+
+      // 2. Fetch from API (Network)
+      if (navigator.onLine) {
+        const data = await fetchEntries();
+        // Sort by date desc
+        const sortedData = data.sort((a: DiaryEntry, b: DiaryEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEntries(sortedData);
+        // Update cache
+        await offlineStorage.saveEntries(sortedData);
+      }
+    } catch (error) {
+      console.error('Failed to load entries from API:', error);
+      toast.error('Offline mode: Showing cached entries');
     } finally {
       setLoading(false);
     }
@@ -111,17 +159,46 @@ function AppContent() {
         palette: entry.palette,
       };
 
+      // 1. Optimistic UI Update & Offline Save
+      const newEntryWithId = { ...entry, ...payload };
+      setEntries(prev => [newEntryWithId, ...prev]);
+      await offlineStorage.saveEntry(newEntryWithId);
+
+      if (!navigator.onLine) {
+        await offlineStorage.addPendingAction({
+          type: 'create',
+          payload: { entry: newEntryWithId, targetGroups },
+          targetGroups,
+          timestamp: Date.now()
+        });
+        toast.success('Saved offline. Will sync when online.', {
+          icon: '📡',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
+        if (targetGroups.includes('private') && targetGroups.length === 1) {
+          navigate('/');
+        } else {
+          navigate('/map');
+        }
+        return;
+      }
+
       const promises = [];
 
-      // 1. Save to Private (Edge Function / API) if selected
+      // 2. Save to Private (Edge Function / API) if selected
       if (targetGroups.includes('private')) {
         console.log('Saving to Private Diary...');
         promises.push(createEntry(payload).then(newEntry => {
-          setEntries(prev => [newEntry, ...prev]);
+          // Update ID if server returns a real one (though we might use UUIDs on client)
+          // For now, assume client ID is fine or server returns same data
         }));
       }
 
-      // 2. Save to Groups (Supabase) if selected
+      // 3. Save to Groups (Supabase) if selected
       const groupIds = targetGroups.filter(id => id !== 'private');
       if (groupIds.length > 0 && user) {
         console.log('Saving to Groups:', groupIds);
@@ -163,7 +240,23 @@ function AppContent() {
 
     } catch (error) {
       console.error('Failed to create entry:', error);
-      toast.error('Failed to save entry. Please try again.');
+      // Even if API fails, we have it in offline storage. 
+      // Maybe we should queue it for sync?
+      // For now, just show error but keep data in UI/Storage
+      toast.error('Network error. Saved offline.');
+      await offlineStorage.addPendingAction({
+          type: 'create',
+          payload: {
+            entry: {
+              ...entry,
+              tags: entry.tags || [],
+              aiTags: entry.aiTags || []
+            },
+            targetGroups
+          },
+          targetGroups,
+          timestamp: Date.now()
+      });
     } finally {
       setSaving(false);
     }
@@ -182,20 +275,52 @@ function AppContent() {
         aiTags: entry.aiTags || [],
         palette: entry.palette,
       };
+      
+      // 1. Optimistic Update
+      const updatedEntry = { ...entry, ...payload };
+      setEntries(prev => prev.map(e => e.id === entry.id ? updatedEntry : e));
+      await offlineStorage.saveEntry(updatedEntry);
+
+      if (!navigator.onLine) {
+        await offlineStorage.addPendingAction({
+          type: 'update',
+          payload: { id: entry.id, payload, targetGroups },
+          targetGroups,
+          timestamp: Date.now()
+        });
+        toast.success('Updated offline. Will sync when online.', { icon: '📡' });
+        navigate('/');
+        return;
+      }
+
       console.log('Updating entry with payload:', payload);
 
       // Note: Update currently only supports updating Personal Entries in Edge Function
       // Group Entry updates are more complex (need to update Supabase row)
       // For now, we only update the personal copy if it exists.
       
-      const updatedEntry = await updateEntry(entry.id, payload);
+      await updateEntry(entry.id, payload);
 
-      setEntries(prev => prev.map(e => e.id === entry.id ? updatedEntry : e));
       toast.success('Memory updated successfully!');
       navigate('/');
     } catch (error) {
       console.error('Failed to update entry:', error);
-      toast.error('Failed to update entry. Please try again.');
+      toast.error('Network error. Saved offline.');
+      await offlineStorage.addPendingAction({
+          type: 'update',
+          payload: { id: entry.id, payload: {
+            photo: entry.photo,
+            caption: entry.caption,
+            mood: entry.mood,
+            date: entry.date,
+            location: entry.location,
+            tags: entry.tags || [],
+            aiTags: entry.aiTags || [],
+            palette: entry.palette,
+          }, targetGroups },
+          targetGroups,
+          timestamp: Date.now()
+      });
     } finally {
       setSaving(false);
     }
@@ -203,14 +328,89 @@ function AppContent() {
 
   async function handleDeleteEntry(id: string) {
     try {
-      await deleteEntry(id);
+      // 1. Optimistic Delete
       setEntries(prev => prev.filter(entry => entry.id !== id));
+      await offlineStorage.deleteEntry(id);
+
+      if (!navigator.onLine) {
+        await offlineStorage.addPendingAction({
+          type: 'delete',
+          payload: { id },
+          targetGroups: ['private'], // Assuming delete is for private mainly
+          timestamp: Date.now()
+        });
+        toast.success('Deleted locally. Will sync when online.', { icon: '🗑️' });
+        return;
+      }
+
+      await deleteEntry(id);
       toast.success('Memory deleted.');
     } catch (error) {
       console.error('Failed to delete entry:', error);
-      toast.error('Failed to delete entry. Please try again.');
+      toast.error('Network error. Queued for deletion.');
+      await offlineStorage.addPendingAction({
+          type: 'delete',
+          payload: { id },
+          targetGroups: ['private'],
+          timestamp: Date.now()
+      });
     }
   }
+
+  // Sync Effect
+  useEffect(() => {
+    const handleOnline = async () => {
+      console.log('Online! Syncing pending actions...');
+      const actions = await offlineStorage.getPendingActions();
+      if (actions.length === 0) return;
+
+      toast.loading(`Syncing ${actions.length} pending changes...`, { id: 'sync-toast' });
+
+      for (const action of actions) {
+        try {
+          if (action.type === 'create') {
+            const { entry, targetGroups } = action.payload;
+            // Re-use logic or call API directly
+            // For simplicity, calling APIs directly here
+            if (targetGroups.includes('private')) {
+               await createEntry(entry);
+            }
+            // Group sync logic... (simplified)
+            const groupIds = targetGroups.filter((id: string) => id !== 'private');
+            if (groupIds.length > 0 && user) {
+                await Promise.all(groupIds.map((groupId: string) => 
+                    supabase.from('diary_entries').insert({
+                        user_id: user.id,
+                        group_id: groupId,
+                        photo_url: entry.photo,
+                        caption: entry.caption,
+                        mood: entry.mood,
+                        location: entry.location,
+                        date: entry.date
+                    })
+                ));
+            }
+          } else if (action.type === 'update') {
+             const { id, payload } = action.payload;
+             await updateEntry(id, payload);
+          } else if (action.type === 'delete') {
+             const { id } = action.payload;
+             await deleteEntry(id);
+          }
+          
+          if (action.id) await offlineStorage.removePendingAction(action.id);
+        } catch (err) {
+          console.error('Sync failed for action:', action, err);
+        }
+      }
+      toast.success('Sync complete!', { id: 'sync-toast' });
+      // Refresh to ensure consistency
+      loadEntries();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user]);
 
   if (authLoading) {
     return (
@@ -370,44 +570,103 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Routes>
-          <Route path="/" element={
-            <TimelineView 
-              entries={entries} 
-              onDeleteEntry={handleDeleteEntry} 
-              loading={loading}
-            />
-          } />
-          <Route path="/calendar" element={
-            <CalendarView 
-              entries={entries} 
-              onDeleteEntry={handleDeleteEntry} 
-            />
-          } />
-          <Route path="/couple" element={<CoupleSplitView />} />
-          <Route path="/map" element={<MapView entries={entries} />} />
-          <Route path="/insights" element={<InsightsView entries={entries} />} />
-          <Route path="/milestones" element={<MilestonesView entries={entries} />} />
-          <Route path="/print" element={<PrintShopView entries={entries} />} />
-          <Route path="/account" element={<AccountView />} />
-          <Route path="/changelog" element={<ChangelogView />} />
-          <Route path="/about" element={<AboutView />} />
-          <Route path="/privacy" element={<PrivacyView />} />
-          <Route path="/terms" element={<TermsView />} />
-          <Route path="/subscription" element={<SubscriptionView />} />
-          <Route path="/add" element={
-            <div className="max-w-2xl mx-auto">
-              <DiaryEntryForm onSave={handleAddEntry} saving={saving} />
-            </div>
-          } />
-          <Route path="/edit/:id" element={
-            <div className="max-w-2xl mx-auto">
-              {/* Logic to find entry by ID */}
-              <EditEntryWrapper entries={entries} onSave={handleUpdateEntry} saving={saving} loading={loading} />
-            </div>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={
+              <PageTransition>
+                <TimelineView 
+                  entries={entries} 
+                  onDeleteEntry={handleDeleteEntry} 
+                  loading={loading}
+                />
+              </PageTransition>
+            } />
+            <Route path="/calendar" element={
+              <PageTransition>
+                <CalendarView 
+                  entries={entries} 
+                  onDeleteEntry={handleDeleteEntry} 
+                />
+              </PageTransition>
+            } />
+            <Route path="/couple" element={
+              <PageTransition>
+                <CoupleSplitView />
+              </PageTransition>
+            } />
+            <Route path="/map" element={
+              <PageTransition>
+                <MapView entries={entries} />
+              </PageTransition>
+            } />
+            <Route path="/insights" element={
+              <PageTransition>
+                <InsightsView entries={entries} />
+              </PageTransition>
+            } />
+            <Route path="/milestones" element={
+              <PageTransition>
+                <MilestonesView entries={entries} />
+              </PageTransition>
+            } />
+            <Route path="/print" element={
+              <PageTransition>
+                <PrintShopView entries={entries} />
+              </PageTransition>
+            } />
+            <Route path="/account" element={
+              <PageTransition>
+                <AccountView />
+              </PageTransition>
+            } />
+            <Route path="/changelog" element={
+              <PageTransition>
+                <ChangelogView />
+              </PageTransition>
+            } />
+            <Route path="/about" element={
+              <PageTransition>
+                <AboutView />
+              </PageTransition>
+            } />
+            <Route path="/privacy" element={
+              <PageTransition>
+                <PrivacyView />
+              </PageTransition>
+            } />
+            <Route path="/terms" element={
+              <PageTransition>
+                <TermsView />
+              </PageTransition>
+            } />
+            <Route path="/subscription" element={
+              <PageTransition>
+                <SubscriptionView />
+              </PageTransition>
+            } />
+            <Route path="/share/book/:id" element={
+              <PageTransition>
+                <SharedBookView />
+              </PageTransition>
+            } />
+            <Route path="/add" element={
+              <PageTransition>
+                <div className="max-w-2xl mx-auto">
+                  <DiaryEntryForm onSave={handleAddEntry} saving={saving} />
+                </div>
+              </PageTransition>
+            } />
+            <Route path="/edit/:id" element={
+              <PageTransition>
+                <div className="max-w-2xl mx-auto">
+                  {/* Logic to find entry by ID */}
+                  <EditEntryWrapper entries={entries} onSave={handleUpdateEntry} saving={saving} loading={loading} />
+                </div>
+              </PageTransition>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
       </main>
 
       {/* Floating Action Button - Mobile */}

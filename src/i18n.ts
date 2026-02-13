@@ -18,6 +18,14 @@ const resources = {
         add: 'New',
         account: 'Profile'
       },
+      map: {
+        features: 'Map Features',
+        showHeatmap: 'Show Heatmap',
+        hideHeatmap: 'Hide Heatmap',
+        playRoute: 'Play Travel Route',
+        stopPlayback: 'Stop Playback',
+        traveling: 'Traveling...'
+      },
       milestones: {
         title: 'Life Milestones',
         subtitle: 'Level up your life, one memory at a time.',
@@ -149,7 +157,13 @@ const resources = {
           init: 'The Genesis: Where it all began',
           basic: 'Core timeline and photo upload capabilities',
           responsive: 'Seamless mobile experience across all devices',
-          pwa: 'PWA Support: Install as a native app'
+          pwa: 'PWA Support: Install as a native app',
+          mapV2: 'Map 2.0: Switched to Gaode Map (China-accessible), added Heatmap & Route Playback',
+          aiV2: 'AI 2.0: Integrated Qwen (Aliyun) for stable access in China',
+          visuals: 'Visuals: Added smooth page transitions and interaction animations',
+          printShopV2: 'Print Shop 2.0: High-fidelity Vector PDF Generation',
+          printEditor: 'Book Editor: Customize photos, reorder pages, and set custom covers',
+          shareOnline: 'Online Sharing: Share your 3D Photo Book with friends via a public link'
         }
       },
       profile: {
@@ -231,16 +245,48 @@ const resources = {
         subtitle: 'Turn your digital memories into physical keepsakes.',
         cart: 'Cart',
         addToCart: 'Add to Cart',
-        checkout: 'Checkout',
+        checkout: 'Print Now',
         polaroid: 'Polaroid Style',
         postcard: 'Postcard',
         photobook: 'Photo Book',
         price: '${{price}}',
+        free: 'Free',
         theYearOf: 'The Year Of',
         introduction: 'Introduction',
         mood: 'Mood',
         theEnd: 'The End',
-        flipInstruction: 'Use Arrow Keys or Click Corners to Flip'
+        flipInstruction: 'Use Arrow Keys or Click Corners to Flip',
+        layoutStyle: 'Layout Style',
+        styles: {
+          classic: 'Classic',
+          grid: 'Grid',
+          magazine: 'Magazine',
+          minimal: 'Minimal'
+        },
+        photos: 'Photos',
+        pages: 'Pages',
+        selectYear: 'Select Year',
+        format: 'Format',
+        formatDesc: 'Includes interactive flipbook link + downloadable PDF',
+        downloadPDF: 'Download PDF',
+        shareOnline: 'Share Online',
+        shareLinkLocal: 'Copy Local Link',
+        linkCopiedLocal: 'Local link copied (Only works on this device)',
+        shareLink: 'Share Link',
+        linkCopied: 'Public link copied! Share it with anyone.',
+        generating: 'Generating PDF, please wait...',
+        successTitle: 'Ready to Print',
+        successDesc: 'Your photo book is ready! You can now download it as a PDF or share the digital version.',
+        storyOfUs: 'The Story of Us',
+        introText: 'This year was filled with unforgettable moments, laughter, and growth. Here are the highlights of my journey in {{year}}.',
+        toBeContinued: 'To be continued...',
+        yearBook: 'Year Book',
+        myPhotoDiary: 'My Photo Diary',
+        clickToPreview: 'Click to Preview',
+        editorTitle: 'Customize Book Content',
+        content: 'Content',
+        customize: 'Customize',
+        photosSelected: '{{count}} photos selected'
       },
       account: {
         title: 'Account & Friends',
@@ -354,6 +400,14 @@ const resources = {
         logs: '更新日志',
         add: '记一笔',
         account: '我的'
+      },
+      map: {
+        features: '地图功能',
+        showHeatmap: '显示热力图',
+        hideHeatmap: '隐藏热力图',
+        playRoute: '播放旅行路线',
+        stopPlayback: '停止播放',
+        traveling: '旅行中...'
       },
       milestones: {
         title: '人生清单',
@@ -489,7 +543,13 @@ const resources = {
           init: '创世纪：一切的开始',
           basic: '核心时光轴与照片上传功能',
           responsive: '全端适配：移动端无缝体验',
-          pwa: 'PWA 支持：像原生应用一样安装'
+          pwa: 'PWA 支持：像原生应用一样安装',
+          mapV2: '地图 2.0：切换至高德地图源（国内访问无忧），新增足迹热力图与路线回放',
+          aiV2: 'AI 2.0：集成通义千问（阿里云）大模型，解决国内访问限制',
+          visuals: '视觉升级：新增页面平滑过渡与细腻的交互动画',
+          printShopV2: '冲印店 2.0：全新矢量 PDF 生成引擎，画质无损',
+          printEditor: '相册编辑器：支持自定义选图、拖拽排序及设置封面',
+          shareOnline: '在线分享：生成 3D 电子书链接，与好友分享你的年度回忆'
         }
       },
       profile: {
@@ -571,16 +631,48 @@ const resources = {
         subtitle: '将数字回忆变成实物珍藏。',
         cart: '购物车',
         addToCart: '加入购物车',
-        checkout: '去结算',
+        checkout: '立即打印',
         polaroid: '拍立得风格',
         postcard: '明信片',
         photobook: '纪念相册',
         price: '¥{{price}}',
+        free: '免费',
         theYearOf: '年度',
         introduction: '序言',
         mood: '心情',
         theEnd: '完',
-        flipInstruction: '使用方向键或点击角落翻页'
+        flipInstruction: '使用方向键或点击角落翻页',
+        layoutStyle: '排版风格',
+        styles: {
+          classic: '经典',
+          grid: '网格',
+          magazine: '杂志',
+          minimal: '极简'
+        },
+        photos: '照片',
+        pages: '页数',
+        selectYear: '选择年份',
+        format: '规格',
+        formatDesc: '包含互动电子书链接 + 可下载 PDF',
+        downloadPDF: '下载 PDF',
+        shareOnline: '在线分享',
+        shareLinkLocal: '复制本机链接',
+        linkCopiedLocal: '本机链接已复制 (仅限本机访问)',
+        shareLink: '分享链接',
+        linkCopied: '公开链接已复制！发送给好友即可查看。',
+        generating: '正在生成 PDF，请稍候...',
+        successTitle: '制作完成',
+        successDesc: '您的照片书已准备就绪！您可以下载 PDF 或分享电子版链接。',
+        storyOfUs: '我们的故事',
+        introText: '这一年充满了难忘的时刻、欢笑与成长。以下是我在 {{year}} 年的旅程高光时刻。',
+        toBeContinued: '未完待续...',
+        yearBook: '年度相册',
+        myPhotoDiary: '我的摄影日记',
+        clickToPreview: '点击预览',
+        editorTitle: '自定义相册内容',
+        content: '内容管理',
+        customize: '自定义',
+        photosSelected: '已选 {{count}} 张照片'
       },
       account: {
         title: '账户与好友',
@@ -694,6 +786,14 @@ const resources = {
         logs: '更新履歴',
         add: '記録',
         account: 'マイページ'
+      },
+      map: {
+        features: '地図機能',
+        showHeatmap: 'ヒートマップを表示',
+        hideHeatmap: 'ヒートマップを隠す',
+        playRoute: '旅のルートを再生',
+        stopPlayback: '再生停止',
+        traveling: '旅行中...'
       },
       milestones: {
         title: '人生の節目',
@@ -826,7 +926,13 @@ const resources = {
           init: '創世記：すべての始まり',
           basic: 'コアタイムラインと写真アップロード機能',
           responsive: 'シームレスなモバイル体験',
-          pwa: 'PWAサポート：ネイティブアプリのようにインストール'
+          pwa: 'PWAサポート：ネイティブアプリのようにインストール',
+          mapV2: 'マップ 2.0：高徳地図（中国対応）に切り替え、ヒートマップとルート再生を追加',
+          aiV2: 'AI 2.0：Qwen（Aliyun）を統合し、中国国内からのアクセスを安定化',
+          visuals: 'ビジュアル：ページ遷移の改善とインタラクションアニメーションの追加',
+          printShopV2: 'プリントショップ 2.0：高精細なベクターPDF生成エンジン',
+          printEditor: 'ブックエディタ：写真の選択、並べ替え、表紙のカスタマイズに対応',
+          shareOnline: 'オンライン共有：3Dフォトブックのリンクを作成して友達とシェア'
         }
       },
       profile: {
@@ -908,16 +1014,48 @@ const resources = {
         subtitle: 'デジタルの思い出を、カタチに残そう。',
         cart: 'カート',
         addToCart: 'カートに入れる',
-        checkout: '購入手続き',
+        checkout: 'プリントする',
         polaroid: 'ポラロイド風',
         postcard: 'ポストカード',
         photobook: 'フォトブック',
         price: '¥{{price}}',
+        free: '無料',
         theYearOf: '今年の',
         introduction: 'はじめに',
         mood: '気分',
         theEnd: 'おわり',
-        flipInstruction: '矢印キーまたは角をクリックしてページをめくる'
+        flipInstruction: '矢印キーまたは角をクリックしてページをめくる',
+        layoutStyle: 'レイアウトスタイル',
+        styles: {
+          classic: 'クラシック',
+          grid: 'グリッド',
+          magazine: 'マガジン',
+          minimal: 'ミニマル'
+        },
+        photos: '写真',
+        pages: 'ページ数',
+        selectYear: '年を選択',
+        format: 'フォーマット',
+        formatDesc: 'インタラクティブなフリップブックリンク + ダウンロード可能なPDFを含む',
+        downloadPDF: 'PDFをダウンロード',
+        shareOnline: 'オンラインで共有',
+        shareLinkLocal: 'ローカルリンクをコピー',
+        linkCopiedLocal: 'ローカルリンクをコピーしました (このデバイスのみ)',
+        shareLink: 'リンクを共有',
+        linkCopied: '公開リンクをコピーしました！誰とでも共有できます。',
+        generating: 'PDFを生成中、お待ちください...',
+        successTitle: '印刷準備完了',
+        successDesc: 'フォトブックの準備ができました！PDFとしてダウンロードするか、デジタル版を共有できます。',
+        storyOfUs: '私たちの物語',
+        introText: '今年は忘れられない瞬間、笑い、そして成長に満ちていました。これが {{year}} 年のハイライトです。',
+        toBeContinued: 'つづく...',
+        yearBook: 'イヤーブック',
+        myPhotoDiary: '私のフォトダイアリー',
+        clickToPreview: 'クリックしてプレビュー',
+        editorTitle: 'ブックの内容を編集',
+        content: 'コンテンツ',
+        customize: 'カスタマイズ',
+        photosSelected: '{{count}} 枚の写真を選択中'
       },
       account: {
         title: 'アカウントと友達',
@@ -990,6 +1128,14 @@ const resources = {
         logs: '업데이트',
         add: '기록하기',
         account: '내 정보'
+      },
+      map: {
+        features: '지도 기능',
+        showHeatmap: '히트맵 보기',
+        hideHeatmap: '히트맵 숨기기',
+        playRoute: '여행 경로 재생',
+        stopPlayback: '재생 중지',
+        traveling: '여행 중...'
       },
       milestones: {
         title: '인생 마일스톤',
@@ -1122,7 +1268,13 @@ const resources = {
           init: 'The Genesis: 모든 것의 시작',
           basic: '핵심 타임라인 및 사진 업로드 기능',
           responsive: '모든 기기에서 원활한 모바일 경험',
-          pwa: 'PWA 지원: 네이티브 앱처럼 설치'
+          pwa: 'PWA 지원: 네이티브 앱처럼 설치',
+          mapV2: '지도 2.0: 고덕 지도(중국 접속 가능)로 전환, 히트맵 및 경로 재생 추가',
+          aiV2: 'AI 2.0: 중국 내 안정적인 접속을 위해 Qwen(Aliyun) 통합',
+          visuals: '비주얼: 부드러운 페이지 전환 및 인터랙션 애니메이션 추가',
+          printShopV2: '인화소 2.0: 고해상도 벡터 PDF 생성 엔진',
+          printEditor: '포토북 편집기: 사진 선택, 순서 변경 및 커버 사용자 지정 지원',
+          shareOnline: '온라인 공유: 3D 포토북 링크를 생성하여 친구와 공유'
         }
       },
       profile: {
@@ -1203,16 +1355,48 @@ const resources = {
         subtitle: '디지털 추억을 실물로 간직하세요.',
         cart: '장바구니',
         addToCart: '담기',
-        checkout: '결제하기',
+        checkout: '인쇄하기',
         polaroid: '폴라로이드 스타일',
         postcard: '엽서',
         photobook: '포토북',
         price: '₩{{price}}',
+        free: '무료',
         theYearOf: '올해의',
         introduction: '들어가며',
         mood: '기분',
         theEnd: '끝',
-        flipInstruction: '방향키나 모서리를 클릭하여 넘기기'
+        flipInstruction: '방향키나 모서리를 클릭하여 넘기기',
+        layoutStyle: '레이아웃 스타일',
+        styles: {
+          classic: '클래식',
+          grid: '그리드',
+          magazine: '매거진',
+          minimal: '미니멀'
+        },
+        photos: '사진',
+        pages: '페이지 수',
+        selectYear: '연도 선택',
+        format: '형식',
+        formatDesc: '인터랙티브 플립북 링크 + 다운로드 가능한 PDF 포함',
+        downloadPDF: 'PDF 다운로드',
+        shareOnline: '온라인 공유',
+        shareLinkLocal: '로컬 링크 복사',
+        linkCopiedLocal: '로컬 링크가 복사되었습니다 (이 기기에서만 작동)',
+        shareLink: '링크 공유',
+        linkCopied: '공개 링크가 복사되었습니다! 누구에게나 공유하세요.',
+        generating: 'PDF 생성 중, 잠시만 기다려주세요...',
+        successTitle: '인쇄 준비 완료',
+        successDesc: '포토북이 준비되었습니다! PDF로 다운로드하거나 디지털 버전을 공유할 수 있습니다.',
+        storyOfUs: '우리의 이야기',
+        introText: '올해는 잊지 못할 순간과 웃음, 성장으로 가득했습니다. {{year}}년의 여정 하이라이트입니다.',
+        toBeContinued: '계속...',
+        yearBook: '이어북',
+        myPhotoDiary: '나의 포토 다이어리',
+        clickToPreview: '클릭하여 미리보기',
+        editorTitle: '포토북 내용 편집',
+        content: '콘텐츠',
+        customize: '편집하기',
+        photosSelected: '{{count}}장의 사진 선택됨'
       },
       account: {
         title: '계정 및 친구',

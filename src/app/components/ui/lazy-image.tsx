@@ -74,9 +74,11 @@ export function LazyImage({
         className
       )}
     >
-      {/* Skeleton / Placeholder */}
+      {/* BlurHash Placeholder (Simple CSS Blur) */}
       {!isLoaded && (
-        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center">
+           <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 opacity-50 blur-xl scale-110" />
+        </div>
       )}
 
       {/* Actual Image */}

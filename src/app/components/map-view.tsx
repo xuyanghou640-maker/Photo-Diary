@@ -1,16 +1,18 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DiaryEntry } from './diary-entry-form';
 import L from 'leaflet';
+import 'leaflet.heat'; // Import heatmap plugin
 import { useNavigate } from 'react-router-dom';
 import { format, isSameDay, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
-import { Filter, Search, User } from 'lucide-react';
+import { Filter, Search, User, Play, Pause, Flame, Map as MapIcon } from 'lucide-react';
 import { useGroup } from '../context/GroupContext';
 import { GroupManager } from './group-manager';
 import { useTranslation } from 'react-i18next';
 import { MOODS } from '../utils/mood-constants';
 import { LazyImage } from './ui/lazy-image';
+import { wgs84ToGcj02 } from '../utils/coord-transform';
 
 // Fix for default Leaflet icon not finding images
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -24,6 +26,156 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// --- Components for Heatmap and Route ---
+
+// Heatmap Layer Component
+function HeatmapLayer({ points }: { points: [number, number, number][] }) {
+  const map = useMap();
+  const heatLayerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    // @ts-ignore - leaflet.heat adds 'heatLayer' to L
+    if (!L.heatLayer) return;
+
+    if (heatLayerRef.current) {
+      map.removeLayer(heatLayerRef.current);
+    }
+
+    if (points.length > 0) {
+      // @ts-ignore
+      heatLayerRef.current = L.heatLayer(points, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        max: 1.0,
+        gradient: {
+            0.4: 'blue',
+            0.6: 'cyan',
+            0.7: 'lime',
+            0.8: 'yellow',
+            1.0: 'red'
+        }
+      }).addTo(map);
+    }
+
+    return () => {
+      if (heatLayerRef.current) {
+        map.removeLayer(heatLayerRef.current);
+      }
+    };
+  }, [map, points]);
+
+  return null;
+}
+
+// Route Playback Component
+function RoutePlayback({ entries, isPlaying, onStop }: { entries: DiaryEntry[], isPlaying: boolean, onStop: () => void }) {
+    const { t } = useTranslation();
+    const map = useMap();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const markerRef = useRef<L.Marker | null>(null);
+    const animationRef = useRef<number | null>(null);
+
+    // Sort entries by date
+    const sortedEntries = useMemo(() => {
+        return [...entries]
+            .filter(e => e.location)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [entries]);
+
+    const pathPositions = useMemo(() => 
+        sortedEntries.map(e => {
+            const [lat, lng] = wgs84ToGcj02(e.location!.lat, e.location!.lng);
+            return [lat, lng] as [number, number];
+        }), 
+    [sortedEntries]);
+
+    useEffect(() => {
+        if (!isPlaying) {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            return;
+        }
+
+        if (sortedEntries.length < 2) {
+            onStop();
+            return;
+        }
+
+        // Start animation
+        let startTimestamp: number | null = null;
+        const durationPerSegment = 1000; // ms per segment
+
+        const animate = (timestamp: number) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = timestamp - startTimestamp;
+            
+            // Calculate total progress
+            const totalSegments = sortedEntries.length - 1;
+            const totalDuration = totalSegments * durationPerSegment;
+            
+            if (progress >= totalDuration) {
+                setCurrentIndex(sortedEntries.length - 1);
+                onStop();
+                return;
+            }
+
+            const currentSegmentIndex = Math.floor(progress / durationPerSegment);
+            const segmentProgress = (progress % durationPerSegment) / durationPerSegment;
+            
+            setCurrentIndex(currentSegmentIndex);
+
+            const start = pathPositions[currentSegmentIndex];
+            const end = pathPositions[currentSegmentIndex + 1];
+
+            if (start && end) {
+                const lat = start[0] + (end[0] - start[0]) * segmentProgress;
+                const lng = start[1] + (end[1] - start[1]) * segmentProgress;
+                
+                if (markerRef.current) {
+                    markerRef.current.setLatLng([lat, lng]);
+                    map.panTo([lat, lng]);
+                }
+            }
+
+            animationRef.current = requestAnimationFrame(animate);
+        };
+
+        animationRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [isPlaying, sortedEntries, pathPositions, map, onStop]);
+
+    if (!isPlaying) return null;
+
+    return (
+        <>
+            <Polyline positions={pathPositions} color="#3b82f6" weight={4} opacity={0.6} dashArray="10, 10" />
+            <Marker 
+                ref={markerRef}
+                position={pathPositions[0]} 
+                icon={L.divIcon({
+                    className: 'playback-marker',
+                    html: `<div style="background-color: #3b82f6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"></div>`,
+                    iconSize: [16, 16]
+                })}
+                zIndexOffset={1000}
+            />
+            {/* Info Overlay */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 dark:bg-gray-800/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                <span className="text-xs text-gray-500 font-medium">{t('map.traveling')}</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    {sortedEntries[currentIndex] ? format(new Date(sortedEntries[currentIndex].date), 'yyyy-MM-dd HH:mm') : ''}
+                </span>
+            </div>
+        </>
+    );
+}
+
 
 // Custom Icons for different users
 const createCustomIcon = (color: string, avatar?: string) => {
@@ -78,6 +230,10 @@ export function MapView({ entries }: MapViewProps) {
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  // New Features State
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [isPlayingRoute, setIsPlayingRoute] = useState(false);
+
   // Combine entries based on group selection
   const allEntries = useMemo(() => {
     // 1. If viewing a specific group, ONLY show that group's entries
@@ -127,7 +283,10 @@ export function MapView({ entries }: MapViewProps) {
 
   // Default center
   const defaultCenter: [number, number] = filteredEntries.length > 0
-    ? [filteredEntries[0].location!.lat, filteredEntries[0].location!.lng]
+    ? (() => {
+        const gcj = wgs84ToGcj02(filteredEntries[0].location!.lat, filteredEntries[0].location!.lng);
+        return [gcj[0], gcj[1]];
+      })()
     : [20, 0];
 
   return (
@@ -261,6 +420,34 @@ export function MapView({ entries }: MapViewProps) {
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
             {t('filters.found', { count: filteredEntries.length })}
           </div>
+
+          {/* New Map Features Control */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+            <h4 className="text-xs font-medium text-gray-500">{t('map.features')}</h4>
+            <button
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    showHeatmap 
+                    ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                }`}
+            >
+                <Flame className={`w-4 h-4 ${showHeatmap ? 'fill-orange-500' : ''}`} />
+                {showHeatmap ? t('map.hideHeatmap') : t('map.showHeatmap')}
+            </button>
+            <button
+                onClick={() => setIsPlayingRoute(!isPlayingRoute)}
+                disabled={filteredEntries.length < 2}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    isPlayingRoute 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                } ${filteredEntries.length < 2 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+                {isPlayingRoute ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                {isPlayingRoute ? t('map.stopPlayback') : t('map.playRoute')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -269,14 +456,35 @@ export function MapView({ entries }: MapViewProps) {
         <MapContainer 
           key={`${defaultCenter[0]}-${defaultCenter[1]}`} 
           center={defaultCenter} 
-          zoom={filteredEntries.length > 0 ? 5 : 2} 
+          zoom={filteredEntries.length > 0 ? 5 : 4} 
           style={{ height: '100%', width: '100%' }}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='Map data &copy; <a href="https://www.amap.com/">Gaode</a> contributors'
+            url="https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}"
           />
-          {filteredEntries.map(entry => {
+          
+          {/* Heatmap Layer */}
+          {showHeatmap && (
+              <HeatmapLayer 
+                  points={filteredEntries
+                      .filter(e => e.location)
+                      .map(e => {
+                          const [lat, lng] = wgs84ToGcj02(e.location!.lat, e.location!.lng);
+                          return [lat, lng, 1];
+                      })} 
+              />
+          )}
+
+          {/* Route Playback */}
+          <RoutePlayback 
+              entries={filteredEntries} 
+              isPlaying={isPlayingRoute} 
+              onStop={() => setIsPlayingRoute(false)} 
+          />
+
+          {/* Normal Markers (Hidden when playing route for cleaner view? Or kept? Let's keep them but maybe dim them? For now keep them) */}
+          {!showHeatmap && !isPlayingRoute && filteredEntries.map(entry => {
             // Determine marker color based on user
             // Default user (me) = Blue, Partner = Pink, Others = Orange
             let markerColor = '#3b82f6'; // blue-500
@@ -287,10 +495,12 @@ export function MapView({ entries }: MapViewProps) {
             if (entry.userId === 'user-3') markerColor = '#f97316'; // orange-500
             if (entry.userId === 'user-4') markerColor = '#10b981'; // green-500
 
+            const [gcjLat, gcjLng] = wgs84ToGcj02(entry.location!.lat, entry.location!.lng);
+
             return (
               <Marker 
                 key={entry.id} 
-                position={[entry.location!.lat, entry.location!.lng]}
+                position={[gcjLat, gcjLng]}
                 icon={createCustomIcon(markerColor, entry.userAvatar)}
               >
                 <Popup>

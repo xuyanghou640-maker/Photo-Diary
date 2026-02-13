@@ -27,27 +27,26 @@ export function AIChatView({ entries, isOpen, onClose }: AIChatViewProps) {
     {
       id: '1',
       role: 'ai',
-      content: 'Hello! I am your Diary Companion. I can help you recall memories, analyze your moods, or find the perfect song for your past moments. Try asking: "What was I doing last year?" or "Show me happy memories".',
+      content: '你好！我是你的回忆助手。我可以帮你回顾过去、分析心情，或者只是陪你聊聊天。\n试着问我："上个月我开心吗？" 或 "我哪天去过海边？"',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState('sk-ba2aac9abdff40f183af300ae493eb93'); // Pre-fill user provided key
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load API key from local storage on mount
   useEffect(() => {
-    // If global key is present, use it and skip local storage check
-    if (aiService.hasGlobalKey()) {
-      return;
-    }
-    
-    const storedKey = localStorage.getItem('gemini_api_key');
+    // Check local storage
+    const storedKey = localStorage.getItem('qwen_api_key');
     if (storedKey) {
       setApiKey(storedKey);
       aiService.init(storedKey);
+    } else {
+      // Initialize with default/hardcoded key if no local storage
+      aiService.init('sk-ba2aac9abdff40f183af300ae493eb93');
     }
   }, []);
 
@@ -61,13 +60,13 @@ export function AIChatView({ entries, isOpen, onClose }: AIChatViewProps) {
 
   const handleSaveKey = () => {
     if (apiKey.trim()) {
-      localStorage.setItem('gemini_api_key', apiKey);
+      localStorage.setItem('qwen_api_key', apiKey);
       aiService.init(apiKey);
       setShowSettings(false);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'ai',
-        content: 'API Key saved! I am now powered by Google Gemini AI. Ask me anything about your diary!',
+        content: 'API Key 已更新！我现在接入了通义千问 (Qwen) 大模型，让我们开始聊天吧！',
         timestamp: new Date()
       }]);
     }
@@ -198,7 +197,7 @@ export function AIChatView({ entries, isOpen, onClose }: AIChatViewProps) {
                 <span className={`w-2 h-2 rounded-full ${aiService.isConfigured() ? 'bg-green-500' : 'bg-orange-500'}`} />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {aiService.isConfigured() 
-                    ? (aiService.hasGlobalKey() ? 'Powered by Site AI' : 'Powered by Gemini Pro') 
+                    ? 'Powered by Qwen AI' 
                     : 'Simulated Mode'}
                 </p>
               </div>
@@ -226,14 +225,14 @@ export function AIChatView({ entries, isOpen, onClose }: AIChatViewProps) {
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <Key className="w-4 h-4" />
-                Google Gemini API Key
+                Qwen API Key (Aliyun)
               </label>
               <div className="flex gap-2">
                 <input 
                   type="password" 
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Paste your API key here..."
+                  placeholder="sk-..."
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 focus:ring-2 focus:ring-purple-500 outline-none"
                 />
                 <button 

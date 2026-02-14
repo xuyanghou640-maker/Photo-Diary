@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
-import { PlusCircle, BookOpen, Loader2, Calendar, LogOut, GitCommit, Map as MapIcon, Sparkles, Printer, UserCircle, Heart, Bot, Target } from 'lucide-react';
+import { PlusCircle, BookOpen, Loader2, Calendar, LogOut, GitCommit, Map as MapIcon, Sparkles, Printer, UserCircle, Heart, Bot, Target, Menu, X } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { DiaryEntryForm, type DiaryEntry } from './components/diary-entry-form';
 import { AIChatView } from './components/ai-chat-view';
@@ -70,6 +70,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useState(new URLSearchParams(location.search));
@@ -429,143 +430,130 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10 transition-colors duration-300">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">Photo Diary</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Capture your daily moments</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Capture your daily moments</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <InstallButton />
-              {/* Theme Selector */}
-              <ThemeSelector />
+              <div className="hidden md:flex items-center gap-3">
+                 <InstallButton />
+                 <ThemeSelector />
+                 {!isAddOrEdit && <ExportMenu entries={entries} />}
+              </div>
 
-              {/* Export Menu */}
-              {!isAddOrEdit && <ExportMenu entries={entries} />}
-
-              {/* Navigation Tabs */}
-              <nav className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto transition-colors">
-                <button
-                  onClick={() => navigate('/')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.timeline')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/calendar')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/calendar'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.calendar')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/map')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/map'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <MapIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.map')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/couple')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/couple'
-                      ? 'bg-white dark:bg-gray-700 text-pink-600 dark:text-pink-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-pink-600 dark:hover:text-pink-400'
-                  }`}
-                >
-                  <Heart className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.couple')}</span>
-                </button>
-                
-                {/* Milestones Button - Replaces Capsule */}
-                <button
-                  onClick={() => navigate('/milestones')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/milestones'
-                      ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400'
-                  }`}
-                >
-                  <Target className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.milestones')}</span>
-                </button>
-
-                <button
-                  onClick={() => navigate('/insights')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/insights'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.insights')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/print')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/print'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Printer className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.print')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/changelog')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/changelog'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <GitCommit className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.logs')}</span>
-                </button>
-                <button
-                  onClick={() => navigate('/add')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                    location.pathname === '/add'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('nav.add')}</span>
-                </button>
+              {/* Desktop Navigation */}
+              <nav className="hidden md:flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl transition-colors">
+                {[
+                  { path: '/', icon: BookOpen, label: 'nav.timeline' },
+                  { path: '/calendar', icon: Calendar, label: 'nav.calendar' },
+                  { path: '/map', icon: MapIcon, label: 'nav.map' },
+                  { path: '/couple', icon: Heart, label: 'nav.couple', color: 'text-pink-600 dark:text-pink-400' },
+                  { path: '/milestones', icon: Target, label: 'nav.milestones', color: 'text-amber-600 dark:text-amber-400' },
+                  { path: '/insights', icon: Sparkles, label: 'nav.insights' },
+                  { path: '/print', icon: Printer, label: 'nav.print' },
+                  { path: '/changelog', icon: GitCommit, label: 'nav.logs' },
+                ].map(item => (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
+                      location.pathname === item.path
+                        ? `bg-white dark:bg-gray-700 shadow-sm ${item.color || 'text-gray-900 dark:text-white'}`
+                        : `${item.color ? 'text-gray-500 dark:text-gray-400 hover:' + item.color.split(' ')[0] : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{t(item.label)}</span>
+                  </button>
+                ))}
               </nav>
 
               <button
+                onClick={() => navigate('/add')}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>{t('nav.add')}</span>
+              </button>
+
+              <button
                 onClick={() => navigate('/account')}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex-shrink-0"
+                className="hidden md:flex p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex-shrink-0"
                 title={t('nav.account')}
               >
                 <UserCircle className="w-5 h-5" />
               </button>
+              
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="md:hidden p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              >
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-xl"
+            >
+              <div className="px-4 py-6 space-y-6">
+                 <div className="flex items-center justify-between gap-4 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                     <InstallButton />
+                     <ThemeSelector />
+                     {!isAddOrEdit && <ExportMenu entries={entries} />}
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { path: '/', icon: BookOpen, label: 'nav.timeline' },
+                      { path: '/add', icon: PlusCircle, label: 'nav.add' },
+                      { path: '/calendar', icon: Calendar, label: 'nav.calendar' },
+                      { path: '/map', icon: MapIcon, label: 'nav.map' },
+                      { path: '/couple', icon: Heart, label: 'nav.couple', color: 'text-pink-600 dark:text-pink-400' },
+                      { path: '/milestones', icon: Target, label: 'nav.milestones', color: 'text-amber-600 dark:text-amber-400' },
+                      { path: '/insights', icon: Sparkles, label: 'nav.insights' },
+                      { path: '/print', icon: Printer, label: 'nav.print' },
+                      { path: '/changelog', icon: GitCommit, label: 'nav.logs' },
+                      { path: '/account', icon: UserCircle, label: 'nav.account' },
+                    ].map(item => (
+                      <button
+                        key={item.path}
+                        onClick={() => {
+                            navigate(item.path);
+                            setIsMenuOpen(false);
+                        }}
+                        className={`flex items-center gap-3 p-4 rounded-xl text-sm transition-all border ${
+                          location.pathname === item.path
+                            ? `bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium ${item.color || 'text-gray-900 dark:text-white'}`
+                            : `border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 ${item.color ? 'text-gray-600 dark:text-gray-400' : 'text-gray-600 dark:text-gray-400'}`
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span>{t(item.label)}</span>
+                      </button>
+                    ))}
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Content */}

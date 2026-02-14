@@ -1,3 +1,33 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* Responsive Base Styles */
+img, video, canvas, audio, iframe, embed, object {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  html {
+    font-size: 16px; /* Ensure readable text size */
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Ensure touch targets are accessible */
+  button, a, input[type="button"], input[type="submit"], input[type="reset"] {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Improve table responsiveness */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

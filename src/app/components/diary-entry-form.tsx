@@ -378,7 +378,7 @@ export function DiaryEntryForm({ onAddEntry, onSave, saving = false, initialData
       {/* Date & Time Selection */}
       <div className="text-center">
         <h2 className="text-2xl mb-2">{isEdit ? t('form.titleEdit') : t('form.titleAdd')}</h2>
-        <div className="flex items-center justify-center gap-4 text-gray-500 text-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-gray-500 text-sm">
             <div className="flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4" />
                 <input 
